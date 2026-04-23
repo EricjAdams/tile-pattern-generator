@@ -40,6 +40,8 @@ Next step: full-stack implementation with backend, authentication, and pattern p
 
 Basic tile preview component used to establish the early layout structure.
 
+---
+
 ### Interactive Grid Version
 
 ![Interactive Grid](./ProgressSnaps/v2-interactive-grid.jpg)
