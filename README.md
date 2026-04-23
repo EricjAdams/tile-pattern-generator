@@ -34,16 +34,14 @@ Next step: full-stack implementation with backend, authentication, and pattern p
 
 ## Progress Screenshots
 
-### Initial Prototype
-
+**Early UI Prototype**
 ![Initial Prototype](./ProgressSnaps/v1-basic-preview.jpg)
 
 Basic tile preview component used to establish the early layout structure.
 
 ---
 
-### Interactive Grid Version
-
+**Interactive Grid System (Current)**
 ![Interactive Grid](./ProgressSnaps/v2-interactive-grid.jpg)
 
 Expanded into an interactive grid system with tile placement, rotation, and layout controls.
