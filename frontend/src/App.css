@@ -287,3 +287,77 @@ img {
     width: 100%;
   }
 }
+/* === MAIN LAYOUT === */
+.layout-container {
+  display: grid;
+  grid-template-columns: 140px 1fr 260px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* === RIGHT PANEL === */
+.saved-layouts-panel {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.saved-layout-search {
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.saved-layout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saved-layout-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.saved-layout-item.selected {
+  border: 2px solid #3b82f6;
+}
+
+.saved-layout-name {
+  font-weight: 500;
+  margin: 0;
+}
+
+.saved-layout-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.saved-layout-actions button {
+  margin-left: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* === INPUT FIX === */
+.layout-name-input {
+  width: 100%;
+  margin: 10px 0 14px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* === PREVIEW CARD WIDTH === */
+.preview-card {
+  width: 100%;
+}
