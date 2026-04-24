@@ -20,6 +20,7 @@ function TilePreview({ onSaveLayout }) {
   const [selectedSavedLayoutId, setSelectedSavedLayoutId] = useState(null);
 
   const fileInputRef = useRef(null);
+  const paintRotationRef = useRef(0);
 
   useEffect(() => {
     function handlePointerUp() {
@@ -36,6 +37,18 @@ function TilePreview({ onSaveLayout }) {
   useEffect(() => {
     fetchSavedLayouts();
   }, []);
+
+  function resetPaintState() {
+    setSelectedTileId(null);
+    setLastClickedCellId(null);
+    setIsPointerDown(false);
+    paintRotationRef.current = 0;
+  }
+
+  function resetCellTracking() {
+    setLastClickedCellId(null);
+    paintRotationRef.current = 0;
+  }
 
   async function fetchSavedLayouts(searchValue = '') {
     try {
@@ -59,13 +72,16 @@ function TilePreview({ onSaveLayout }) {
   }
 
   function applyTileToCell(clickedId, tileId) {
+    const nextRotation = paintRotationRef.current;
+    paintRotationRef.current = (paintRotationRef.current + 90) % 360;
+
     setLayout((currentLayout) =>
       currentLayout.map((cell) =>
         cell.id === clickedId
           ? {
               ...cell,
               tileId,
-              rotation: Math.floor(Math.random() * 4) * 90,
+              rotation: nextRotation,
             }
           : cell,
       ),
@@ -88,8 +104,7 @@ function TilePreview({ onSaveLayout }) {
     if (selectedTileId !== null) {
       if (lastClickedCellId === clickedId) {
         rotateCell(clickedId);
-        setSelectedTileId(null);
-        setLastClickedCellId(null);
+        resetPaintState();
         setStatusMessage('Paint mode exited. Tile rotated.');
         return;
       }
@@ -116,6 +131,8 @@ function TilePreview({ onSaveLayout }) {
   }
 
   function handleLibraryTileClick(tileId) {
+    paintRotationRef.current = 0;
+
     setSelectedTileId((currentSelectedTileId) => {
       const nextSelectedTileId =
         currentSelectedTileId === tileId ? null : tileId;
@@ -134,9 +151,7 @@ function TilePreview({ onSaveLayout }) {
 
   function handleResetLayout() {
     setLayout(initialLayout);
-    setSelectedTileId(null);
-    setLastClickedCellId(null);
-    setIsPointerDown(false);
+    resetPaintState();
     setSelectedSavedLayoutId(null);
     setStatusMessage('Layout reset.');
   }
@@ -158,7 +173,7 @@ function TilePreview({ onSaveLayout }) {
 
     setTiles((currentTiles) => [...currentTiles, newTile]);
     setSelectedTileId(newTile.id);
-    setLastClickedCellId(null);
+    resetCellTracking();
     setStatusMessage(`Uploaded "${newTile.name}" and entered paint mode.`);
 
     event.target.value = '';
@@ -174,9 +189,7 @@ function TilePreview({ onSaveLayout }) {
     setLayout(savedLayout.layout);
     setLayoutName(savedLayout.name);
     setSelectedSavedLayoutId(savedLayout.id);
-    setSelectedTileId(null);
-    setLastClickedCellId(null);
-    setIsPointerDown(false);
+    resetPaintState();
     setStatusMessage(`Loaded "${savedLayout.name}".`);
   }
 

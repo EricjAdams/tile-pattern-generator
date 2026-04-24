@@ -44,7 +44,7 @@ img {
 
 .app-shell {
   flex: 1;
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 40px 16px 60px;
 }
@@ -60,9 +60,11 @@ img {
 }
 
 .layout-container {
-  display: flex;
-  gap: 28px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 150px minmax(720px, 780px) 280px;
+  gap: 24px;
+  align-items: start;
+  justify-content: center;
   width: 100%;
 }
 
@@ -70,7 +72,9 @@ img {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 140px;
+  width: 150px;
+  max-height: 780px;
+  overflow-y: auto;
   flex-shrink: 0;
 }
 
@@ -87,12 +91,12 @@ img {
 .library-tile.active {
   outline: 3px solid #7fa8c0;
   outline-offset: 2px;
-  transform: scale(1.08);
+  transform: scale(1.04);
   box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3);
 }
 
 .library-tile:hover {
-  transform: scale(1.04);
+  transform: scale(1.03);
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
 }
 
@@ -126,7 +130,8 @@ img {
 }
 
 .preview-card {
-  flex: 1;
+  width: 100%;
+  max-width: 780px;
   min-width: 0;
   background: linear-gradient(
     145deg,
@@ -138,7 +143,7 @@ img {
   box-shadow:
     0 30px 70px rgba(15, 24, 30, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  padding: clamp(16px, 2vw, 30px);
+  padding: 28px;
 }
 
 .preview-header {
@@ -175,6 +180,7 @@ img {
   margin: 0 0 16px;
   color: #8fb8cf;
   font-size: 0.95rem;
+  text-align: center;
 }
 
 .action-group {
@@ -206,10 +212,28 @@ img {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
 }
 
+.layout-name-label {
+  display: block;
+  margin: 0 0 6px;
+  color: #b2c0c9;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.layout-name-input {
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cfd7dc;
+  background: #ffffff;
+  color: #172128;
+}
+
 .tile-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: clamp(4px, 1vw, 10px);
+  gap: 10px;
   width: 100%;
 }
 
@@ -252,63 +276,31 @@ img {
   pointer-events: none;
 }
 
-.footer {
-  text-align: center;
-  padding: 16px;
-  font-size: 0.8rem;
-  color: #6f808a;
-  letter-spacing: 0.08em;
-}
-
-@media (max-width: 900px) {
-  .preview-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-group {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 800px) {
-  .layout-container {
-    flex-direction: column;
-  }
-
-  .tile-library {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .preview-card {
-    width: 100%;
-  }
-}
-/* === MAIN LAYOUT === */
-.layout-container {
-  display: grid;
-  grid-template-columns: 140px 1fr 260px;
-  gap: 20px;
-  align-items: start;
-}
-
-/* === RIGHT PANEL === */
 .saved-layouts-panel {
-  background: #f9fafb;
+  width: 280px;
+  max-height: 780px;
+  overflow-y: auto;
+  background: rgba(249, 250, 251, 0.9);
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
+}
+
+.saved-layouts-panel h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 1.45rem;
+  color: #10181e;
 }
 
 .saved-layout-search {
   width: 100%;
-  padding: 6px 8px;
+  padding: 8px 10px;
   margin-bottom: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  border: 1px solid #cfd7dc;
+  border-radius: 8px;
+  background: #fff;
 }
 
 .saved-layout-list {
@@ -321,9 +313,10 @@ img {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   background: white;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 10px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
 }
 
@@ -332,8 +325,9 @@ img {
 }
 
 .saved-layout-name {
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
+  color: #172128;
 }
 
 .saved-layout-meta {
@@ -342,22 +336,77 @@ img {
   margin: 0;
 }
 
+.saved-layout-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .saved-layout-actions button {
-  margin-left: 6px;
-  padding: 4px 6px;
+  padding: 5px 7px;
   font-size: 12px;
 }
 
-/* === INPUT FIX === */
-.layout-name-input {
-  width: 100%;
-  margin: 10px 0 14px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+.empty-saved-layouts {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-/* === PREVIEW CARD WIDTH === */
-.preview-card {
-  width: 100%;
+.footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 0.8rem;
+  color: #6f808a;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 1100px) {
+  .layout-container {
+    grid-template-columns: 130px minmax(560px, 1fr);
+  }
+
+  .saved-layouts-panel {
+    grid-column: 2;
+    width: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .app-shell {
+    padding: 28px 14px 44px;
+  }
+
+  .layout-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tile-library {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    max-height: none;
+    justify-content: center;
+  }
+
+  .library-tile {
+    width: 110px;
+  }
+
+  .preview-card,
+  .saved-layouts-panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .preview-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-group {
+    justify-content: flex-start;
+  }
 }
