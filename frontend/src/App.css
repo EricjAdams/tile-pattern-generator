@@ -44,7 +44,9 @@ img {
 
 .app-shell {
   flex: 1;
-  max-width: 1320px;
+  /* Increased max-width to accommodate three-column layout with wider preview card.
+     Layout max: 150px (library) + 920px (preview) + 280px (saved layouts) + 40px gap = 1390px */
+  max-width: 1400px;
   margin: 0 auto;
   padding: 40px 16px 60px;
 }
@@ -61,8 +63,10 @@ img {
 
 .layout-container {
   display: grid;
-  grid-template-columns: 150px minmax(720px, 780px) 280px;
-  gap: 24px;
+  /* Layout refinement: allow preview card to grow up to 920px for zoom control and dimension panel,
+     while keeping tile library (150px) and saved layouts panel (280px) fixed widths */
+  grid-template-columns: 150px minmax(760px, 920px) 280px;
+  gap: 20px;
   align-items: start;
   justify-content: center;
   width: 100%;
@@ -131,7 +135,8 @@ img {
 
 .preview-card {
   width: 100%;
-  max-width: 780px;
+  /* Increased max-width to accommodate zoom control and dynamic grid adjustments */
+  max-width: 920px;
   min-width: 0;
   background: linear-gradient(
     145deg,
@@ -232,17 +237,29 @@ img {
 
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(48px, 1fr));
+  /* Fixed pixel cell sizing enables visible zoom control.
+     Base cell size is 56px; zoom multiplier scales this size proportionally.
+     At 40% zoom: ~22px cells, at 100%: 56px, at 160%: ~90px.
+     Fixed sizing allows the grid to scroll horizontally when zoomed or when
+     many columns are generated, preventing tile overlap. */
+  grid-template-columns: repeat(3, 56px);
   gap: 10px;
-  width: 100%;
-  /* Dynamic wall layout: constrain height and enable scrolling for large grids.
-     Using minmax(48px, 1fr) ensures each tile cell has a stable minimum width,
-     preventing overlap when many columns are generated. */
+  width: fit-content;
+  /* Overflow containment: max-width: 100% ensures the grid respects the preview card width.
+     At high zoom, the grid grows but stays constrained to its parent container.
+     Horizontal and vertical scrolling handle overflow inside the grid container. */
+  max-width: 100%;
   max-height: 600px;
   overflow: auto;
   padding: 12px;
   background: rgba(249, 250, 251, 0.5);
   border-radius: 8px;
+  /* Layout isolation: contain and isolation prevent grid content from escaping bounds */
+  contain: layout paint;
+  isolation: isolate;
+  /* Grid alignment: content flows from top-left, respecting container bounds */
+  justify-content: start;
+  align-content: start;
 }
 
 .tile {
@@ -416,12 +433,99 @@ img {
   border-left: 3px solid #7fa8c0;
 }
 
+/* Zoom control: allows user to scale the tile grid for better pattern analysis */
+.zoom-control {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: rgba(249, 250, 251, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(141, 166, 180, 0.2);
+}
+
+.zoom-control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.zoom-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(141, 166, 180, 0.2) 0%,
+    rgba(141, 166, 180, 0.4) 100%
+  );
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7fa8c0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.2s ease;
+}
+
+.zoom-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7fa8c0;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.2s ease;
+}
+
+.zoom-slider::-moz-range-thumb:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.zoom-percentage {
+  min-width: 45px;
+  text-align: right;
+  color: #8ea5b2;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .footer {
   text-align: center;
   padding: 16px;
   font-size: 0.8rem;
   color: #6f808a;
   letter-spacing: 0.08em;
+}
+
+@media (max-width: 1200px) {
+  .layout-container {
+    grid-template-columns: 140px minmax(600px, 1fr) 260px;
+    gap: 16px;
+  }
+
+  .tile-library {
+    width: 140px;
+  }
+
+  .preview-card {
+    max-width: 100%;
+  }
+
+  .saved-layouts-panel {
+    width: 260px;
+  }
 }
 
 @media (max-width: 1100px) {

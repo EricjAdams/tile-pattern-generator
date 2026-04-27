@@ -58,6 +58,9 @@ function TilePreview({ onSaveLayout }) {
   const [gridColumns, setGridColumns] = useState(3);
   const [gridRows, setGridRows] = useState(3);
 
+  // Zoom control for grid preview (40% to 160%)
+  const [zoomLevel, setZoomLevel] = useState(100);
+
   // Saved layouts and search state
   const [savedLayouts, setSavedLayouts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -527,11 +530,30 @@ function TilePreview({ onSaveLayout }) {
 
         {statusMessage && <p className="status-message">{statusMessage}</p>}
 
+        {/* Zoom control for grid preview */}
+        <div className="zoom-control">
+          <label className="layout-name-label" htmlFor="zoom-slider">
+            Grid Zoom
+          </label>
+          <div className="zoom-control-row">
+            <input
+              id="zoom-slider"
+              type="range"
+              min="40"
+              max="160"
+              value={zoomLevel}
+              onChange={(event) => setZoomLevel(Number(event.target.value))}
+              className="zoom-slider"
+            />
+            <span className="zoom-percentage">{zoomLevel}%</span>
+          </div>
+        </div>
+
         {/* Dynamic grid of tile cells for layout editing */}
         <div
           className="tile-grid"
           style={{
-            gridTemplateColumns: `repeat(${gridColumns}, minmax(48px, 1fr))`,
+            gridTemplateColumns: `repeat(${gridColumns}, ${Math.round(56 * (zoomLevel / 100))}px)`,
           }}
         >
           {layout.map((cell) => {
