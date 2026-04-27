@@ -1,15 +1,21 @@
-const layout = [
-  { id: 1, tileId: 1, rotation: 180 },
-  { id: 2, tileId: 1, rotation: 90 },
-  { id: 3, tileId: 1, rotation: 0 },
+/**
+ * Generates a tile layout grid based on the number of rows and columns.
+ *
+ * @param {number} rows - Number of rows in the grid
+ * @param {number} columns - Number of columns in the grid
+ * @param {number} defaultTileId - The default tile to populate each cell
+ * @returns {Array} Array of tile objects with id, tileId, and rotation
+ */
+function createLayout(rows = 3, columns = 3, defaultTileId = 1) {
+  return Array.from({ length: rows * columns }, (_, index) => ({
+    id: index + 1,        // Unique identifier for each tile cell
+    tileId: defaultTileId, // Tile type assigned to the cell
+    rotation: 0,           // Initial rotation (0 degrees)
+  }));
+}
 
-  { id: 4, tileId: 1, rotation: 270 },
-  { id: 5, tileId: 1, rotation: 0 },
-  { id: 6, tileId: 1, rotation: 180 },
+// Default layout (keeps current app working with a 3x3 grid)
+const layout = createLayout(3, 3);
 
-  { id: 7, tileId: 1, rotation: 90 },
-  { id: 8, tileId: 1, rotation: 270 },
-  { id: 9, tileId: 1, rotation: 0 }
-];
-
+export { createLayout };
 export default layout;

@@ -53,25 +53,30 @@ app.get('/users/:userId/layouts', (req, res) => {
 });
 
 // CREATE layout
+// Accepts a layout name and layout object for a specific user and persists it to the database
 app.post('/users/:userId/layouts', (req, res) => {
   const { userId } = req.params;
   const { name, layout } = req.body;
 
+  // Validate that both name and layout data are provided
   if (!name || !layout) {
     return res.status(400).json({ error: 'Name and layout are required' });
   }
 
+  // Insert the layout into the database, storing layout as JSON
   const query = `
     INSERT INTO layouts (user_id, name, layout_data)
     VALUES (?, ?, ?)
   `;
 
   db.query(query, [userId, name, JSON.stringify(layout)], (err, result) => {
+    // Handle database errors
     if (err) {
       console.error('Database insert failed:', err);
       return res.status(500).json({ error: 'Database insert failed' });
     }
 
+    // Return 201 Created with the new layout's ID
     res.status(201).json({
       message: 'Layout created successfully',
       id: result.insertId,

@@ -232,9 +232,17 @@ img {
 
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(48px, 1fr));
   gap: 10px;
   width: 100%;
+  /* Dynamic wall layout: constrain height and enable scrolling for large grids.
+     Using minmax(48px, 1fr) ensures each tile cell has a stable minimum width,
+     preventing overlap when many columns are generated. */
+  max-height: 600px;
+  overflow: auto;
+  padding: 12px;
+  background: rgba(249, 250, 251, 0.5);
+  border-radius: 8px;
 }
 
 .tile {
@@ -251,6 +259,8 @@ img {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
   touch-action: none;
+  /* Dynamic wall layout: tiles scale freely to fill grid columns without constraints
+     to prevent overlap in grids with many columns (e.g., 19 cols). Scrolling handles overflow. */
 }
 
 .tile:hover {
@@ -351,6 +361,59 @@ img {
   color: #6b7280;
   font-size: 0.9rem;
   text-align: center;
+}
+
+/* ===== Dynamic Wall Layout Styling ===== */
+
+/* Dimension panel: provides UI for setting custom wall dimensions */
+.dimension-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: rgba(249, 250, 251, 0.7);
+  border-radius: 12px;
+  border: 1px solid rgba(141, 166, 180, 0.3);
+}
+
+.dimension-panel label {
+  display: block;
+  margin: 0 0 6px;
+  color: #8ea5b2;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dimension-panel input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #cfd7dc;
+  background: #ffffff;
+  color: #172128;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dimension-panel input:focus {
+  outline: none;
+  border-color: #7fa8c0;
+  box-shadow: 0 0 0 3px rgba(127, 168, 192, 0.1);
+}
+
+/* Dimension summary: displays calculated wall information */
+.dimension-summary {
+  margin: 16px 0;
+  padding: 12px;
+  text-align: center;
+  color: #b2c0c9;
+  font-size: 0.95rem;
+  background: rgba(23, 33, 40, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid #7fa8c0;
 }
 
 .footer {
