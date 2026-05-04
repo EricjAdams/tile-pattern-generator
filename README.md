@@ -25,7 +25,7 @@ An interactive tile layout tool that allows users to design and preview tile pat
 Frontend MVP complete.  
 Next step: full-stack implementation with backend, authentication, and pattern persistence.
 
-## Future Enhancements
+## Part 1 Future Enhancements
 
 - Save/load patterns (database)
 - Grout color visualization
@@ -42,7 +42,7 @@ Basic tile preview component used to establish the early layout structure.
 
 ---
 
-### Interactive Grid System
+### Part Deux Interactive Grid System
 
 ![Interactive Grid](./ProgressSnaps/v2-interactive-grid.jpg)
 
