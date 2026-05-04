@@ -4,24 +4,24 @@ import TilePreview from './TilePreview';
 function App() {
   const saveLayout = async (layout, name) => {
     try {
-      const response = await fetch('http://localhost:3001/users/1/layouts', {
+      const response = await fetch('http://localhost:3001/layouts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          layout,
+          userId: 1,
+          name: name,
+          layout: JSON.stringify(layout), // MySQL needs the grid as a string
         }),
       });
 
-      const data = await response.json();
+      if (!response.ok) throw new Error('Database rejected the save');
 
-      console.log('Saved:', data);
-      alert('Layout saved to database!');
+      const data = await response.json();
+      console.log('Save successful:', data);
+      return true; // Tells TilePreview to refresh the sidebar
     } catch (error) {
-      console.error('Error saving layout:', error);
-      alert('Could not save layout.');
+      console.error('Save error:', error);
+      return false;
     }
   };
 
@@ -31,7 +31,6 @@ function App() {
         <h1>Tile Pattern Generator</h1>
         <TilePreview onSaveLayout={saveLayout} />
       </div>
-
       <footer className="footer">
         Created by Eric Adams • Tile Pattern Generator Prototype
       </footer>
