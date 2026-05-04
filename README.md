@@ -20,7 +20,7 @@ An interactive tile layout tool that allows users to design and preview tile pat
 - JavaScript
 - CSS
 
-## Project Status
+## PART 1 Project Status
 
 Frontend MVP complete.  
 Next step: full-stack implementation with backend, authentication, and pattern persistence.
@@ -34,7 +34,7 @@ Next step: full-stack implementation with backend, authentication, and pattern p
 
 ## Progress Screenshots
 
-### Early UI Prototype
+### PART DEUX Early UI Prototype
 
 ![Initial Prototype](./ProgressSnaps/v1-basic-preview.jpg)
 
