@@ -42,7 +42,7 @@ Basic tile preview component used to establish the early layout structure.
 
 ---
 
-### Current Interactive Grid System
+### Interactive Grid System
 
 ![Interactive Grid](./ProgressSnaps/v2-interactive-grid.jpg)
 
