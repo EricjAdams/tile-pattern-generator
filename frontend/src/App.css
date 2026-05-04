@@ -14,8 +14,9 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
   background: 
-   
-  color: hotpink;
+    radial-gradient(circle at top left, rgba(140, 163, 176, 0.14) 0%, transparent 28%),
+    linear-gradient(180deg, #f6f7f7 0%, #edf1f3 100%);
+  color: #172128;
   line-height: 1.5;
 }
 
