@@ -13,17 +13,40 @@ An interactive tile layout tool that allows users to design and preview tile pat
 - Tile rotation support
 - Dynamic tile library
 - Upload custom tile images
+- Dynamic wall dimension controls
+- Adjustable zoom system
+- Responsive layout behavior
+- Saved project interface prototype
+- Real-time tile preview rendering
+
+---
 
 ## Tech Stack
 
 - React (Vite)
 - JavaScript
 - CSS
+- Node.js
+- Express
+- MySQL
+
+---
 
 ## Project Status
 
-Frontend MVP complete.  
-Next step: full-stack implementation with backend, authentication, and pattern persistence.
+Frontend prototype and UI system complete.
+
+Current development includes:
+
+- Responsive layout improvements
+- Dynamic scaling and zoom behavior
+- Layout persistence preparation
+- Backend/database integration
+- Authentication workflow integration
+
+Next step: complete full-stack implementation with persistent project saving and user accounts.
+
+---
 
 ## Future Enhancements
 
@@ -31,10 +54,13 @@ Next step: full-stack implementation with backend, authentication, and pattern p
 - Grout color visualization
 - Mobile-first UI improvements
 - AR-style tile preview
+- Pattern export system
+- Material usage calculations
+- Advanced layout templates
 
 ---
 
-## Progress Screenshots
+# Progress Screenshots
 
 ### Early UI Prototype
 
@@ -52,11 +78,19 @@ Expanded into an interactive grid system with tile placement, rotation, and layo
 
 ---
 
-### Current UI State
+### Previous UI State
 
-![Current UI](./ProgressSnaps/May3Progress.jpg)
+![Previous UI](./ProgressSnaps/May3Progress.jpg)
 
-Full application view including dynamic wall grid, saved layouts panel, and tile library.
+Earlier application layout featuring the initial grid system and tile management workflow.
+
+---
+
+### Latest UI Revision
+
+![Latest UI](./ProgressSnaps/ProgramState51726.jpg)
+
+Updated interface featuring improved responsive scaling behavior, enhanced typography contrast, footer positioning fixes, zoom controls, project naming workflow improvements, and refined tile layout rendering.
 
 ---
 

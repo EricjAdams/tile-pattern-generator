@@ -1,412 +1,471 @@
+/* --- Global Variables & Reset --- */
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
-  background: #f1f3f4;
+  --primary-bg: #f1f3f4;
+  --dark-shell: linear-gradient(145deg, rgba(23, 33, 40, 0.98), rgba(36, 49, 58, 0.96));
+  --accent-blue: #7fa8c0;
+  --text-light: #f3f7fa;
+  --text-dim: #b2c0c9;
+  --glass-white: rgba(255, 255, 255, 0.05);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background:
+  font-family: 'Inter', system-ui, sans-serif;
+  background: 
     radial-gradient(circle at top left, rgba(140, 163, 176, 0.14) 0%, transparent 28%),
-    radial-gradient(circle at top right, rgba(101, 122, 135, 0.12) 0%, transparent 24%),
     linear-gradient(180deg, #f6f7f7 0%, #edf1f3 100%);
-  line-height: 1.5;
   color: #172128;
+  line-height: 1.5;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-#root {
-  min-height: 100vh;
-}
-
+/* --- Authentication --- */
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.app-shell {
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  max-width: 1320px;
+  padding: 20px;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.auth-card h1 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: var(--accent-blue);
+}
+
+.auth-card h2 {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  color: #172128;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-card input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.auth-card input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(127, 168, 192, 0.1);
+}
+
+.auth-card input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #999;
+}
+
+.auth-card button[type="submit"] {
+  padding: 12px;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.auth-card button[type="submit"]:hover:not(:disabled) {
+  background: #6b93ab;
+}
+
+.auth-card button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-card button[type="button"] {
+  background: transparent;
+  color: var(--accent-blue);
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.auth-card p {
+  text-align: center;
+  color: #666;
+  margin: 10px 0;
+}
+
+.auth-error {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 10px;
+  background: #ffe6e6;
+  border-radius: 6px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(127, 168, 192, 0.1);
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.logout-button {
+  padding: 8px 15px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.logout-button:hover {
+  background: #c0392b;
+}
+
+/* --- Layout --- */
+.app-shell {
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 16px 60px;
+  padding: 40px 20px;
+  /* Reserve space so a sticky footer does not overlap content */
+  padding-bottom: 72px;
 }
 
 .app-shell h1 {
-  margin: 0 0 20px;
   text-align: center;
-  font-size: clamp(2.6rem, 5vw, 4.2rem);
-  line-height: 1;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
   letter-spacing: -0.04em;
-  font-weight: 600;
-  color: #10181e;
+  margin-bottom: 40px;
 }
 
 .layout-container {
   display: grid;
-  grid-template-columns: 150px minmax(720px, 780px) 280px;
-  gap: 24px;
+  /* Left palette, center generator (min 560px, grow as space allows), right saved projects */
+  grid-template-columns: 120px minmax(560px, 1fr) 300px;
+  gap: 30px;
   align-items: start;
-  justify-content: center;
-  width: 100%;
+  /* Allows the whole container to scroll horizontally if needed */
+  overflow-x: auto; 
 }
 
+/* --- Sidebar: Tile Library --- */
 .tile-library {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 150px;
-  max-height: 780px;
-  overflow-y: auto;
-  flex-shrink: 0;
+  gap: 15px;
+  position: sticky;
+  top: 20px;
 }
 
 .library-tile {
-  aspect-ratio: 1 / 1;
+  width: 100px;
+  height: 100px;
+  flex: 0 0 100px;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(141, 166, 180, 0.5);
   cursor: pointer;
-  background: #fff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 3px solid transparent;
+  background: white;
+  transition: transform 0.2s;
 }
 
 .library-tile.active {
-  outline: 3px solid #7fa8c0;
-  outline-offset: 2px;
-  transform: scale(1.04);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3);
-}
-
-.library-tile:hover {
-  transform: scale(1.03);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+  border-color: var(--accent-blue);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(127, 168, 192, 0.3);
 }
 
 .library-tile img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .upload-tile-button {
-  min-height: 52px;
+  width: 100px;
+  height: 100px;
+  flex: 0 0 100px;
+  border: 1px dashed var(--accent-blue);
   border-radius: 12px;
-  border: 1px dashed rgba(141, 166, 180, 0.7);
-  background: rgba(255, 255, 255, 0.6);
+  background: transparent;
   color: #20303b;
   cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  font-weight: 600;
 }
 
-.upload-tile-button:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-}
-
-.hidden-file-input {
-  display: none;
-}
-
+/* --- Center: Pattern Builder Card --- */
 .preview-card {
-  width: 100%;
-  max-width: 780px;
-  min-width: 0;
-  background: linear-gradient(
-    145deg,
-    rgba(23, 33, 40, 0.98),
-    rgba(36, 49, 58, 0.96)
-  );
-  border: 1px solid rgba(103, 126, 139, 0.28);
+  background: var(--dark-shell);
   border-radius: 28px;
-  box-shadow:
-    0 30px 70px rgba(15, 24, 30, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  padding: 28px;
-}
-
-.preview-header {
+  padding: 30px;
+  color: var(--text-light);
+  /* Use flex so the card sizes naturally to its contents but stays within the column */
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  width: auto;
+  max-width: 100%;
+  /* Keep a readable minimum width at low zoom while allowing growth */
+  min-width: 560px;
+  flex: 1 1 auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
 
-.section-label {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8ea5b2;
+/* Scoped typography colors for the dark preview card */
+.preview-card {
+  --preview-primary: #e6f3f8; /* soft off-white, for primary headings/text */
+  --preview-secondary: #9fb3bd; /* muted blue-gray, for secondary labels */
+  --preview-input: #d6eef7; /* lighter input text */
+  --preview-muted: #86a0aa; /* low-contrast supportive text */
+  color: var(--preview-primary);
+}
+
+/* Headings and main text inside the panel */
+.preview-card h2,
+.preview-card p,
+.preview-card .dimension-summary p,
+.preview-card .zoom-percentage,
+.preview-card .status-message {
+  color: var(--preview-primary);
+}
+
+/* Secondary labels and small caps */
+.preview-card .section-label,
+.preview-card label {
+  color: var(--preview-secondary);
+}
+
+/* Inputs inside the preview: ensure typed values are readable on light backgrounds */
+/* Project name and numeric dimension inputs should be dark charcoal for readability */
+.preview-card .layout-name-input,
+.preview-card .dimension-panel input,
+.preview-card input[type="number"] {
+  color: #10181e; /* dark charcoal for typed input */
+}
+
+/* Generic inputs that remain on darker backgrounds can keep the lighter tone */
+.preview-card input:not(.layout-name-input):not([type="number"]):not(.dimension-panel input) {
+  color: var(--preview-input);
+}
+
+/* Placeholder text should be softer than typed text */
+.preview-card input::placeholder {
+  color: #86a0aa; /* muted gray-blue */
+  opacity: 1;
+}
+
+/* Ensure the project name input's typed text is light and readable
+   Override any inline styles that make it dark. This targets only the
+   project name input so dimension inputs remain dark as required. */
+.preview-card .layout-name-input {
+  color: var(--preview-input) !important;
+}
+
+/* Buttons: keep existing styling but ensure text is readable */
+.preview-card .ghost-button {
+  color: var(--text-light);
+}
+
+/* Reduced-contrast captions */
+.preview-card .saved-layout-count,
+.preview-card .muted {
+  color: var(--preview-muted);
 }
 
 .preview-header h2 {
-  margin: 0;
-  font-size: 1.7rem;
-  font-weight: 600;
-  color: #f3f7fa;
+  font-size: 1.8rem;
+  margin: 0 0 10px 0;
 }
 
-.preview-text {
-  margin: 0 0 20px;
-  color: #b2c0c9;
-  line-height: 1.6;
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
 }
 
-.status-message {
-  margin: 0 0 16px;
-  color: #8fb8cf;
-  font-size: 0.95rem;
-  text-align: center;
-}
-
-.action-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.ghost-button {
-  border: 1px solid rgba(145, 168, 181, 0.28);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f0f5f8;
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-size: 0.92rem;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.ghost-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(174, 194, 205, 0.46);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-}
-
-.layout-name-label {
-  display: block;
-  margin: 0 0 6px;
-  color: #b2c0c9;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
+/* --- Input Styling --- */
 .layout-name-input {
   width: 100%;
-  margin: 0 0 18px;
-  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 12px;
   border-radius: 8px;
-  border: 1px solid #cfd7dc;
-  background: #ffffff;
-  color: #172128;
+  margin: 15px 0;
 }
 
+.dimension-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  background: var(--glass-white);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.dimension-panel input {
+  width: 100%;
+  background: #fff;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* --- Pattern Grid Area --- */
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
+  /* Uses your dynamic column variable from the JS if present, or defaults */
+  grid-template-columns: repeat(auto-fill, 80px); 
+  gap: 12px; 
+  padding: 12px;
+  margin-top: 20px;
+  
+  width: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  
+  background: transparent;
+  isolation: isolate;
+  min-width: 0;
+  margin: 0 auto;
 }
 
 .tile {
-  aspect-ratio: 1 / 1;
   width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #f3f5f4;
   border-radius: 10px;
-  background: linear-gradient(145deg, #f3f5f4, #d9e3e8);
-  border: 1px solid rgba(141, 166, 180, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 12px 28px rgba(7, 12, 16, 0.22);
-  padding: 2px;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  user-select: none;
-  touch-action: none;
-}
-
-.tile:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 18px 34px rgba(7, 12, 16, 0.28);
-}
-
-.tile-photo {
-  padding: 0;
   overflow: hidden;
-  appearance: none;
+  cursor: pointer;
   border: none;
-  background: none;
 }
 
 .tile-photo-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  pointer-events: none;
 }
 
+/* --- Right Sidebar: Saved Projects --- */
 .saved-layouts-panel {
-  width: 280px;
-  max-height: 780px;
-  overflow-y: auto;
-  background: rgba(249, 250, 251, 0.9);
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
-}
-
-.saved-layouts-panel h2 {
-  margin: 0 0 12px;
-  text-align: center;
-  font-size: 1.45rem;
-  color: #10181e;
-}
-
-.saved-layout-search {
-  width: 100%;
-  padding: 8px 10px;
-  margin-bottom: 12px;
-  border: 1px solid #cfd7dc;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.saved-layout-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  position: sticky;
+  top: 20px;
+  padding: 10px;
 }
 
 .saved-layout-item {
+  padding: 15px;
+  background: var(--glass-white);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+  transition: 0.2s;
+}
+
+.saved-layout-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-blue);
+}
+
+/* --- Buttons --- */
+.action-group {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 10px;
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+  justify-content: flex-end;
 }
 
-.saved-layout-item.selected {
-  border: 2px solid #3b82f6;
+.ghost-button {
+  background: var(--glass-white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.saved-layout-name {
-  font-weight: 600;
-  margin: 0;
-  color: #172128;
+.ghost-button:hover:not(:disabled) {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
 }
 
-.saved-layout-meta {
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
+.ghost-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.saved-layout-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.saved-layout-actions button {
-  padding: 5px 7px;
-  font-size: 12px;
-}
-
-.empty-saved-layouts {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.footer {
-  text-align: center;
-  padding: 16px;
-  font-size: 0.8rem;
-  color: #6f808a;
-  letter-spacing: 0.08em;
-}
-
-@media (max-width: 1100px) {
+/* --- Responsive --- */
+@media (max-width: 1200px) {
   .layout-container {
-    grid-template-columns: 130px minmax(560px, 1fr);
+    grid-template-columns: 1fr;
   }
-
-  .saved-layouts-panel {
-    grid-column: 2;
-    width: 100%;
-    max-height: none;
-  }
-}
-
-@media (max-width: 800px) {
-  .app-shell {
-    padding: 28px 14px 44px;
-  }
-
-  .layout-container {
-    display: flex;
-    flex-direction: column;
-  }
-
   .tile-library {
     flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-    max-height: none;
-    justify-content: center;
+    overflow-x: auto;
+    position: static;
   }
+}
 
-  .library-tile {
-    width: 110px;
-  }
+/* Footer: sticky near bottom, subtle, centered, and non-overlapping */
+.footer {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  text-align: center;
+  padding: 12px 0;
+  color: #6b7f88; /* muted tone */
+  font-size: 0.95rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0));
+  z-index: 5;
+}
 
-  .preview-card,
-  .saved-layouts-panel {
-    width: 100%;
-    max-width: none;
-  }
-
-  .preview-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-group {
-    justify-content: flex-start;
-  }
+@media (max-width: 600px) {
+  .footer { font-size: 0.85rem; padding: 10px 0; }
 }
