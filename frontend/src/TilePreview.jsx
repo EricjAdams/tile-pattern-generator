@@ -3,7 +3,6 @@ import TileComponent from './TileComponent';
 import initialTiles from './data/tiles';
 import initialLayout, { createLayout } from './data/layout';
 
-const USER_ID = 1;
 const API_BASE_URL = 'http://localhost:3001';
 const MAX_ROWS = 30;
 const MAX_COLUMNS = 30;
@@ -24,7 +23,7 @@ function inferGridColumns(layoutData) {
   return Number.isInteger(squareRoot) ? squareRoot : 11;
 }
 
-function TilePreview({ onSaveLayout }) {
+function TilePreview({ onSaveLayout, loggedInUser }) {
   const [tiles, setTiles] = useState(initialTiles);
   const [layout, setLayout] = useState(initialLayout);
   const [selectedTileId, setSelectedTileId] = useState(null);
@@ -41,7 +40,7 @@ function TilePreview({ onSaveLayout }) {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [savedLayouts, setSavedLayouts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [layoutName, setLayoutName] = useState('New Tile Design');
+  const [layoutName, setLayoutName] = useState('');
   const [selectedSavedLayoutId, setSelectedSavedLayoutId] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -95,10 +94,14 @@ function TilePreview({ onSaveLayout }) {
   };
 
   async function fetchSavedLayouts(searchValue = '') {
+    if (!loggedInUser) {
+      setSavedLayouts([]);
+      return;
+    }
+
     try {
-      // Logic fix: Ensure we fetch User 1's layouts
       const response = await fetch(
-        `${API_BASE_URL}/users/${USER_ID}/layouts?search=${encodeURIComponent(searchValue)}`,
+        `${API_BASE_URL}/users/${loggedInUser.id}/layouts?search=${encodeURIComponent(searchValue)}`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -196,6 +199,10 @@ function TilePreview({ onSaveLayout }) {
   }
 
   async function handleCreateLayout() {
+    if (!loggedInUser) {
+      setStatusMessage('Please log in to save layouts.');
+      return;
+    }
     try {
       const nameToSave = layoutName.trim() || 'Untitled Layout';
       const success = await onSaveLayout(layout, nameToSave);
@@ -286,10 +293,18 @@ function TilePreview({ onSaveLayout }) {
             <h2>Tile Pattern Builder</h2>
           </div>
           <div className="action-group">
-            <button className="ghost-button" onClick={handleCreateLayout}>
+            <button
+              className="ghost-button"
+              onClick={handleCreateLayout}
+              disabled={!loggedInUser}
+            >
               Save New
             </button>
-            <button className="ghost-button" onClick={handleUpdateLayout}>
+            <button
+              className="ghost-button"
+              onClick={handleUpdateLayout}
+              disabled={!loggedInUser}
+            >
               Update
             </button>
             <button className="ghost-button" onClick={handleResetLayout}>
@@ -309,7 +324,7 @@ function TilePreview({ onSaveLayout }) {
             className="layout-name-input"
             value={layoutName}
             onChange={(e) => setLayoutName(e.target.value)}
-            placeholder="Enter layout name..."
+            placeholder="New Tile Design"
             style={{
               fontSize: '1.2rem',
               fontWeight: 'bold',

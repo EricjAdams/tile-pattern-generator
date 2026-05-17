@@ -26,12 +26,86 @@ app.get('/', (req, res) => {
   res.send('Tile Pattern Generator backend is running!');
 });
 
-// 1. GET ALL LAYOUTS (Matches TilePreview fetch)
+// ===== AUTHENTICATION ENDPOINTS =====
+
+// REGISTER: Create a new user
+app.post('/register', (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: 'Username, email, and password are required' });
+  }
+
+  // Check if user already exists
+  const checkQuery = 'SELECT id FROM users WHERE email = ? OR username = ?';
+  db.query(checkQuery, [email, username], (err, results) => {
+    if (err) {
+      console.error('Database check failed:', err);
+      return res.status(500).json({ error: 'Database check failed' });
+    }
+
+    if (results.length > 0) {
+      return res.status(409).json({ error: 'User with that email or username already exists' });
+    }
+
+    // Insert new user
+    const insertQuery = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
+    db.query(insertQuery, [username, email, password], (err, result) => {
+      if (err) {
+        console.error('User creation failed:', err);
+        return res.status(500).json({ error: 'User creation failed' });
+      }
+
+      res.status(201).json({
+        id: result.insertId,
+        username: username,
+        email: email,
+      });
+    });
+  });
+});
+
+// LOGIN: Authenticate a user
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const query = 'SELECT id, username, email, password FROM users WHERE email = ?';
+  db.query(query, [email], (err, results) => {
+    if (err) {
+      console.error('Database query failed:', err);
+      return res.status(500).json({ error: 'Database query failed' });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = results[0];
+
+    // Plain text password comparison (simple class demo)
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    });
+  });
+});
+
+// ===== LAYOUT ENDPOINTS =====
+
+// 1. GET ALL LAYOUTS FOR A USER
 app.get('/users/:userId/layouts', (req, res) => {
   const { userId } = req.params;
   const search = req.query.search || '';
 
-  // Check column names: using userId and layout based on your error logs
   const query = `
     SELECT id, userId, name, layout 
     FROM layouts
@@ -56,8 +130,7 @@ app.get('/users/:userId/layouts', (req, res) => {
   });
 });
 
-// 2. CREATE LAYOUT (Matches App.jsx fetch)
-// Important: Matches 'http://localhost:3001/layouts' called by App.jsx
+// 2. CREATE NEW LAYOUT
 app.post('/layouts', (req, res) => {
   const { userId, name, layout } = req.body;
 
@@ -67,7 +140,6 @@ app.post('/layouts', (req, res) => {
 
   const query = `INSERT INTO layouts (userId, name, layout) VALUES (?, ?, ?)`;
 
-  // We stringify the layout object for MySQL TEXT/JSON columns
   db.query(query, [userId, name, JSON.stringify(layout)], (err, result) => {
     if (err) {
       console.error('Database insert failed:', err);
