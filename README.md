@@ -8,27 +8,27 @@ An interactive tile layout tool that allows users to design and preview tile pat
 
 ## Features
 
-- Click-to-place tile system
-- Drag-to-paint multiple tiles
-- Tile rotation support
-- Dynamic tile library
-- Upload custom tile images
-- Dynamic wall dimension controls
-- Adjustable zoom system
-- Responsive layout behavior
-- Saved project interface prototype
-- Real-time tile preview rendering
+- Click-to-place tile system  
+- Drag-to-paint multiple tiles  
+- Tile rotation support  
+- Dynamic tile library  
+- Upload custom tile images  
+- Dynamic wall dimension controls  
+- Adjustable zoom system  
+- Responsive layout behavior  
+- Saved project interface prototype  
+- Real-time tile preview rendering  
 
 ---
 
 ## Tech Stack
 
-- React (Vite)
-- JavaScript
-- CSS
-- Node.js
-- Express
-- MySQL
+- React (Vite)  
+- JavaScript  
+- CSS  
+- Node.js  
+- Express  
+- MySQL  
 
 ---
 
@@ -38,11 +38,11 @@ Frontend prototype and UI system complete.
 
 Current development includes:
 
-- Responsive layout improvements
-- Dynamic scaling and zoom behavior
-- Layout persistence preparation
-- Backend/database integration
-- Authentication workflow integration
+- Responsive layout improvements  
+- Dynamic scaling and zoom behavior  
+- Layout persistence preparation  
+- Backend/database integration  
+- Authentication workflow integration  
 
 Next step: complete full-stack implementation with persistent project saving and user accounts.
 
@@ -50,13 +50,13 @@ Next step: complete full-stack implementation with persistent project saving and
 
 ## Future Enhancements
 
-- Save/load patterns (database)
-- Grout color visualization
-- Mobile-first UI improvements
-- AR-style tile preview
-- Pattern export system
-- Material usage calculations
-- Advanced layout templates
+- Save/load patterns (database)  
+- Grout color visualization  
+- Mobile-first UI improvements  
+- AR-style tile preview  
+- Pattern export system  
+- Material usage calculations  
+- Advanced layout templates  
 
 ---
 
