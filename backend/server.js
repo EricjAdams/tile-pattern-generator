@@ -26,11 +26,11 @@ app.get('/users/:userId/layouts', (req, res) => {
   const search = req.query.search || '';
 
   const query = `
-    SELECT id, user_id, name, layout_data, created_at, updated_at
+    SELECT id, userId, name, layout
     FROM layouts
-    WHERE user_id = ?
+    WHERE userId = ?
       AND name LIKE ?
-    ORDER BY updated_at DESC, id DESC
+    ORDER BY id DESC
   `;
 
   db.query(query, [userId, `%${search}%`], (err, results) => {
@@ -41,11 +41,9 @@ app.get('/users/:userId/layouts', (req, res) => {
 
     const layouts = results.map((item) => ({
       id: item.id,
-      userId: item.user_id,
+      userId: item.userId,
       name: item.name,
-      layout: normalizeLayoutData(item.layout_data),
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
+      layout: normalizeLayoutData(item.layout),
     }));
 
     res.json(layouts);
@@ -57,18 +55,20 @@ app.post('/users/:userId/layouts', (req, res) => {
   const { userId } = req.params;
   const { name, layout } = req.body;
 
-  if (!name || !layout) {
-    return res.status(400).json({ error: 'Name and layout are required' });
+  console.log('CREATE LAYOUT REQUEST', { userId, name, layoutType: typeof layout });
+
+  if (!name || !layout || !Array.isArray(layout)) {
+    return res.status(400).json({ error: 'Name and layout array are required' });
   }
 
   const query = `
-    INSERT INTO layouts (user_id, name, layout_data)
+    INSERT INTO layouts (userId, name, layout)
     VALUES (?, ?, ?)
   `;
 
   db.query(query, [userId, name, JSON.stringify(layout)], (err, result) => {
     if (err) {
-      console.error('Database insert failed:', err);
+      console.error('Database insert failed:', err, { userId, name, layout });
       return res.status(500).json({ error: 'Database insert failed' });
     }
 
@@ -84,7 +84,7 @@ app.get('/layouts/:id', (req, res) => {
   const { id } = req.params;
 
   const query = `
-    SELECT id, user_id, name, layout_data, created_at, updated_at
+    SELECT id, userId, name, layout
     FROM layouts
     WHERE id = ?
   `;
@@ -103,11 +103,9 @@ app.get('/layouts/:id', (req, res) => {
 
     res.json({
       id: item.id,
-      userId: item.user_id,
+      userId: item.userId,
       name: item.name,
-      layout: normalizeLayoutData(item.layout_data),
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
+      layout: normalizeLayoutData(item.layout),
     });
   });
 });
@@ -123,7 +121,7 @@ app.put('/layouts/:id', (req, res) => {
 
   const query = `
     UPDATE layouts
-    SET name = ?, layout_data = ?
+    SET name = ?, layout = ?
     WHERE id = ?
   `;
 

@@ -61,7 +61,7 @@ img {
 
 .layout-container {
   display: grid;
-  grid-template-columns: 150px minmax(720px, 780px) 280px;
+  grid-template-columns: 150px minmax(560px, 1fr) 280px;
   gap: 24px;
   align-items: start;
   justify-content: center;
@@ -71,6 +71,7 @@ img {
 .tile-library {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
   width: 150px;
   max-height: 780px;
@@ -79,13 +80,42 @@ img {
 }
 
 .library-tile {
-  aspect-ratio: 1 / 1;
+  position: relative;
+  width: 86px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(141, 166, 180, 0.5);
   cursor: pointer;
   background: #fff;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.delete-tile-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0.95;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.delete-tile-button:hover {
+  background: rgba(15, 23, 42, 1);
+  transform: scale(1.05);
 }
 
 .library-tile.active {
@@ -104,6 +134,8 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
 .upload-tile-button {
@@ -230,11 +262,124 @@ img {
   color: #172128;
 }
 
+.preview-controls {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.control-group label {
+  color: #cfd7dc;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.control-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cfd7dc;
+  background: #f8fafc;
+  color: #172128;
+}
+
+.control-button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.control-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.18);
+}
+
+.zoom-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.zoom-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #cfd7dc;
+  font-size: 0.9rem;
+}
+
+.zoom-controls input[type='range'] {
+  width: 100%;
+}
+
+.tile-grid-wrapper {
+  overflow: auto;
+}
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+.confirm-dialog {
+  width: min(100%, 420px);
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 34px 80px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.confirm-dialog p {
+  margin: 0 0 24px;
+  color: #172128;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-dialog .ghost-button,
+.confirm-dialog .control-button {
+  min-width: 120px;
+}
+
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
+  width: max-content;
 }
 
 .tile {
@@ -272,6 +417,7 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   border-radius: 8px;
   pointer-events: none;
 }
