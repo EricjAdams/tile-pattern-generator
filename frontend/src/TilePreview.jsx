@@ -87,7 +87,12 @@ function resizeLayout(layout, width, height) {
 }
 
 function getGridSize(wallSize, tileSize, grout) {
-  if (!Number.isFinite(wallSize) || wallSize <= 0 || !Number.isFinite(tileSize) || tileSize <= 0) {
+  if (
+    !Number.isFinite(wallSize) ||
+    wallSize <= 0 ||
+    !Number.isFinite(tileSize) ||
+    tileSize <= 0
+  ) {
     return 1;
   }
 
@@ -396,8 +401,12 @@ function TilePreview({ onSaveLayout }) {
     }
 
     const dimensions = inferLayoutDimensions(normalized, wallWidth);
-    setWallWidth(getWallDimensionFromTileCount(dimensions.width, tileSize, grout));
-    setWallHeight(getWallDimensionFromTileCount(dimensions.height, tileSize, grout));
+    setWallWidth(
+      getWallDimensionFromTileCount(dimensions.width, tileSize, grout),
+    );
+    setWallHeight(
+      getWallDimensionFromTileCount(dimensions.height, tileSize, grout),
+    );
     setLayout(normalized);
     setLayoutName(savedLayout.name || '');
     setSelectedSavedLayoutId(savedLayout.id);
@@ -572,7 +581,9 @@ function TilePreview({ onSaveLayout }) {
                 max="240"
                 step="0.25"
                 value={wallWidth}
-                onChange={(event) => setWallWidth(parseNumberInput(event.target.value, 0.25))}
+                onChange={(event) =>
+                  setWallWidth(parseNumberInput(event.target.value, 0.25))
+                }
               />
             </div>
 
@@ -586,7 +597,9 @@ function TilePreview({ onSaveLayout }) {
                 max="240"
                 step="0.25"
                 value={wallHeight}
-                onChange={(event) => setWallHeight(parseNumberInput(event.target.value, 0.25))}
+                onChange={(event) =>
+                  setWallHeight(parseNumberInput(event.target.value, 0.25))
+                }
               />
             </div>
 
@@ -600,7 +613,11 @@ function TilePreview({ onSaveLayout }) {
                 max="240"
                 step="0.25"
                 value={tileSize}
-                onChange={(event) => setTileSize(parseNumberInput(event.target.value, INITIAL_TILE_SIZE))}
+                onChange={(event) =>
+                  setTileSize(
+                    parseNumberInput(event.target.value, INITIAL_TILE_SIZE),
+                  )
+                }
               />
             </div>
 
@@ -614,7 +631,9 @@ function TilePreview({ onSaveLayout }) {
                 max="4"
                 step="0.0625"
                 value={grout}
-                onChange={(event) => setGrout(parseNumberInput(event.target.value, INITIAL_GROUT))}
+                onChange={(event) =>
+                  setGrout(parseNumberInput(event.target.value, INITIAL_GROUT))
+                }
               />
             </div>
 
@@ -670,7 +689,8 @@ function TilePreview({ onSaveLayout }) {
             }}
           >
             {layout.map((cell) => {
-              const tile = tiles.find((item) => item.id === cell.tileId) || defaultTile;
+              const tile =
+                tiles.find((item) => item.id === cell.tileId) || defaultTile;
 
               return (
                 <TileComponent
