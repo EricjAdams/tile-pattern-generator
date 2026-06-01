@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import TileComponent from './TileComponent';
 import initialTiles from './data/tiles';
 import initialLayout from './data/layout';
 
-const USER_ID = 1;
 const API_BASE_URL = 'http://localhost:3001';
 const INITIAL_TILE_SIZE = 6;
 const INITIAL_GROUT = 0.125;
@@ -43,9 +42,56 @@ function normalizeLayout(rawLayout) {
     return {
       id: Number(cell.id) || index + 1,
       tileId: Number(cell.tileId) || 1,
+      tileKey: typeof cell.tileKey === 'string' ? cell.tileKey : undefined,
       rotation: Number(cell.rotation) || 0,
     };
   });
+}
+
+function normalizeSavedProject(rawProject) {
+  let parsedProject = rawProject;
+
+  if (typeof rawProject === 'string') {
+    try {
+      parsedProject = JSON.parse(rawProject);
+    } catch (error) {
+      console.warn('Saved project parse failed:', error, rawProject);
+      return null;
+    }
+  }
+
+  if (Array.isArray(parsedProject)) {
+    const cells = normalizeLayout(parsedProject);
+    return cells ? { isLegacy: true, cells } : null;
+  }
+
+  if (
+    typeof parsedProject !== 'object' ||
+    parsedProject === null ||
+    !Array.isArray(parsedProject.cells)
+  ) {
+    console.warn('Saved project is invalid:', parsedProject);
+    return null;
+  }
+
+  const cells = normalizeLayout(parsedProject.cells);
+
+  if (!cells) {
+    return null;
+  }
+
+  return {
+    isLegacy: false,
+    version: Number(parsedProject.version) || 2,
+    cells,
+    columns: Number(parsedProject.columns),
+    rows: Number(parsedProject.rows),
+    wallWidth: Number(parsedProject.wallWidth),
+    wallHeight: Number(parsedProject.wallHeight),
+    tileSize: Number(parsedProject.tileSize),
+    grout: Number(parsedProject.grout),
+    zoom: Number(parsedProject.zoom),
+  };
 }
 
 function clamp(value, min, max) {
@@ -64,7 +110,7 @@ function inferLayoutDimensions(cells, fallbackWidth = 3) {
     return { width: square, height: square };
   }
 
-  for (let width = 1; width <= 24; width += 1) {
+  for (let width = square; width >= 2; width -= 1) {
     if (length % width === 0) {
       return { width, height: length / width };
     }
@@ -81,6 +127,7 @@ function resizeLayout(layout, width, height) {
     return {
       id: index + 1,
       tileId: existing?.tileId ?? 1,
+      tileKey: existing?.tileKey,
       rotation: existing?.rotation ?? 0,
     };
   });
@@ -108,10 +155,35 @@ function getWallDimensionFromTileCount(count, tileSize, grout) {
   return count * tileSize + Math.max(0, count - 1) * grout;
 }
 
-function TilePreview({ onSaveLayout }) {
-  const [tiles, setTiles] = useState(initialTiles);
+function resolveTileForCell(cell, tiles, defaultTile) {
+  return (
+    tiles.find((item) => item.key && item.key === cell.tileKey) ||
+    tiles.find((item) => item.id === cell.tileId) ||
+    defaultTile
+  );
+}
+
+function normalizeUploadedTile(tile) {
+  const imageUrl = tile.image || tile.imageUrl || '';
+  const tileKey = tile.tileKey || tile.key;
+
+  return {
+    id: tile.id,
+    key: tileKey,
+    tileKey,
+    name: tile.name || 'Uploaded tile',
+    image: imageUrl.startsWith('/uploads')
+      ? `${API_BASE_URL}${imageUrl}`
+      : imageUrl,
+    source: 'uploaded',
+  };
+}
+
+function TilePreview({ userId, onSaveLayout }) {
+  const [uploadedTiles, setUploadedTiles] = useState([]);
+  const [uploadedTilesUserId, setUploadedTilesUserId] = useState(null);
   const [layout, setLayout] = useState(initialLayout);
-  const [selectedTileId, setSelectedTileId] = useState(null);
+  const [selectedTileKey, setSelectedTileKey] = useState(null);
   const [lastClickedCellId, setLastClickedCellId] = useState(null);
   const [isPointerDown, setIsPointerDown] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -143,12 +215,8 @@ function TilePreview({ onSaveLayout }) {
     };
   }, []);
 
-  useEffect(() => {
-    fetchSavedLayouts();
-  }, []);
-
   function resetPaintState() {
-    setSelectedTileId(null);
+    setSelectedTileKey(null);
     setLastClickedCellId(null);
     setIsPointerDown(false);
     paintRotationRef.current = 0;
@@ -159,10 +227,10 @@ function TilePreview({ onSaveLayout }) {
     paintRotationRef.current = 0;
   }
 
-  async function fetchSavedLayouts(searchValue = '') {
+  const fetchSavedLayouts = useCallback(async (searchValue = '') => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/users/${USER_ID}/layouts?search=${encodeURIComponent(
+        `${API_BASE_URL}/users/${userId}/layouts?search=${encodeURIComponent(
           searchValue,
         )}`,
       );
@@ -179,9 +247,55 @@ function TilePreview({ onSaveLayout }) {
       setSavedLayouts([]);
       setStatusMessage('Could not connect to saved layouts.');
     }
-  }
+  }, [userId]);
 
-  function applyTileToCell(clickedId, tileId) {
+  const fetchUploadedTiles = useCallback(async () => {
+    setUploadedTiles([]);
+    setUploadedTilesUserId(null);
+    setSelectedTileKey(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/tiles`);
+
+      if (!response.ok) {
+        setStatusMessage('Could not load uploaded tiles.');
+        return;
+      }
+
+      const data = await response.json();
+      const uploadedTiles = Array.isArray(data)
+        ? data.map(normalizeUploadedTile)
+        : [];
+
+      setUploadedTiles(uploadedTiles);
+      setUploadedTilesUserId(userId);
+    } catch (error) {
+      console.error('Error fetching uploaded tiles:', error);
+      setStatusMessage('Could not connect to uploaded tiles.');
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const loadSavedLayouts = window.setTimeout(() => {
+      fetchSavedLayouts();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(loadSavedLayouts);
+    };
+  }, [fetchSavedLayouts]);
+
+  useEffect(() => {
+    const loadUploadedTiles = window.setTimeout(() => {
+      fetchUploadedTiles();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(loadUploadedTiles);
+    };
+  }, [fetchUploadedTiles]);
+
+  function applyTileToCell(clickedId, tile) {
     const nextRotation = paintRotationRef.current;
     paintRotationRef.current = (paintRotationRef.current + 90) % 360;
 
@@ -190,7 +304,8 @@ function TilePreview({ onSaveLayout }) {
         cell.id === clickedId
           ? {
               ...cell,
-              tileId,
+              tileId: tile.id,
+              tileKey: tile.key,
               rotation: nextRotation,
             }
           : cell,
@@ -211,7 +326,15 @@ function TilePreview({ onSaveLayout }) {
   function handleGridPointerDown(clickedId) {
     setIsPointerDown(true);
 
-    if (selectedTileId !== null) {
+    if (selectedTileKey !== null) {
+      const selectedTile = tiles.find((tile) => tile.key === selectedTileKey);
+
+      if (!selectedTile) {
+        setStatusMessage('Selected tile is unavailable.');
+        resetPaintState();
+        return;
+      }
+
       if (lastClickedCellId === clickedId) {
         rotateCell(clickedId);
         resetPaintState();
@@ -219,7 +342,7 @@ function TilePreview({ onSaveLayout }) {
         return;
       }
 
-      applyTileToCell(clickedId, selectedTileId);
+      applyTileToCell(clickedId, selectedTile);
       setLastClickedCellId(clickedId);
       setStatusMessage('Tile applied to grid.');
       return;
@@ -232,28 +355,36 @@ function TilePreview({ onSaveLayout }) {
 
   function handleGridPointerEnter(clickedId) {
     if (!isPointerDown) return;
-    if (selectedTileId === null) return;
+    if (selectedTileKey === null) return;
     if (lastClickedCellId === clickedId) return;
 
-    applyTileToCell(clickedId, selectedTileId);
+    const selectedTile = tiles.find((tile) => tile.key === selectedTileKey);
+
+    if (!selectedTile) {
+      resetPaintState();
+      setStatusMessage('Selected tile is unavailable.');
+      return;
+    }
+
+    applyTileToCell(clickedId, selectedTile);
     setLastClickedCellId(clickedId);
     setStatusMessage('Painting across grid.');
   }
 
-  function handleLibraryTileClick(tileId) {
+  function handleLibraryTileClick(tileKey) {
     paintRotationRef.current = 0;
 
-    setSelectedTileId((currentSelectedTileId) => {
-      const nextSelectedTileId =
-        currentSelectedTileId === tileId ? null : tileId;
+    setSelectedTileKey((currentSelectedTileKey) => {
+      const nextSelectedTileKey =
+        currentSelectedTileKey === tileKey ? null : tileKey;
 
       setStatusMessage(
-        nextSelectedTileId === null
+        nextSelectedTileKey === null
           ? 'Paint mode turned off.'
           : 'Paint mode active.',
       );
 
-      return nextSelectedTileId;
+      return nextSelectedTileKey;
     });
 
     setLastClickedCellId(null);
@@ -274,23 +405,51 @@ function TilePreview({ onSaveLayout }) {
     fileInputRef.current?.click();
   }
 
-  function handleFileUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleFileUpload(event) {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    const newTile = {
-      id: Date.now(),
-      name: file.name.replace(/\.[^/.]+$/, ''),
-      image: imageUrl,
-    };
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('tileImages', file);
+    });
 
-    setTiles((currentTiles) => [...currentTiles, newTile]);
-    setSelectedTileId(newTile.id);
-    resetCellTracking();
-    setStatusMessage(`Uploaded "${newTile.name}" and entered paint mode.`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/tiles`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json().catch(() => null);
 
-    event.target.value = '';
+      if (!response.ok) {
+        setStatusMessage(data?.error || 'Tile upload failed.');
+        return;
+      }
+
+      const uploadedTiles = Array.isArray(data)
+        ? data.map(normalizeUploadedTile)
+        : [];
+
+      if (uploadedTiles.length === 0) {
+        setStatusMessage('No tile images were uploaded.');
+        return;
+      }
+
+      setUploadedTiles((currentTiles) => [...currentTiles, ...uploadedTiles]);
+      setUploadedTilesUserId(userId);
+      setSelectedTileKey(uploadedTiles[0].key);
+      resetCellTracking();
+      setStatusMessage(
+        uploadedTiles.length === 1
+          ? `Uploaded "${uploadedTiles[0].name}" and entered paint mode.`
+          : `Uploaded ${uploadedTiles.length} tiles and entered paint mode.`,
+      );
+    } catch (error) {
+      console.error('Tile upload failed:', error);
+      setStatusMessage('Could not connect to upload tiles.');
+    } finally {
+      event.target.value = '';
+    }
   }
 
   function handleRequestDeleteTile(tile) {
@@ -306,17 +465,27 @@ function TilePreview({ onSaveLayout }) {
       return;
     }
 
-    const nextTiles = tiles.filter((item) => item.id !== tileToDelete.id);
+    const nextUploadedTiles = uploadedTiles.filter(
+      (item) => item.key !== tileToDelete.key,
+    );
+    const nextTiles = [...initialTiles, ...nextUploadedTiles];
     const safeTileId = nextTiles[0]?.id ?? 0;
 
-    setTiles(nextTiles);
-    setSelectedTileId((currentSelectedTileId) =>
-      currentSelectedTileId === tileToDelete.id ? null : currentSelectedTileId,
+    setUploadedTiles(nextUploadedTiles);
+    setSelectedTileKey((currentSelectedTileKey) =>
+      currentSelectedTileKey === tileToDelete.key
+        ? null
+        : currentSelectedTileKey,
     );
     setLayout((currentLayout) =>
       currentLayout.map((cell) =>
         cell.tileId === tileToDelete.id
-          ? { ...cell, tileId: safeTileId, rotation: 0 }
+          ? {
+              ...cell,
+              tileId: safeTileId,
+              tileKey: nextTiles[0]?.key,
+              rotation: 0,
+            }
           : cell,
       ),
     );
@@ -380,34 +549,88 @@ function TilePreview({ onSaveLayout }) {
   }
 
   async function handleCreateLayout() {
-    console.log('Saving layout payload:', { name: layoutName, layout });
+    const projectSnapshot = buildProjectSnapshot();
+    console.log('Saving layout payload:', {
+      name: layoutName,
+      layout: projectSnapshot,
+    });
     try {
-      await onSaveLayout(layout, layoutName);
+      await onSaveLayout(projectSnapshot, layoutName);
       await fetchSavedLayouts(searchTerm);
       setStatusMessage(`Created saved layout "${layoutName}".`);
     } catch (error) {
       console.error('Create layout failed:', error);
-      setStatusMessage('Could not save layout.');
+      setStatusMessage(error.message || 'Could not save layout.');
     }
   }
 
   function handleLoadSavedLayout(savedLayout) {
-    const normalized = normalizeLayout(savedLayout.layout);
+    const savedProject = normalizeSavedProject(savedLayout.layout);
 
-    if (!normalized) {
+    if (!savedProject) {
       console.warn('Invalid saved layout, load aborted:', savedLayout);
       setStatusMessage('Unable to load saved layout. Layout data is invalid.');
       return;
     }
 
-    const dimensions = inferLayoutDimensions(normalized, wallWidth);
-    setWallWidth(
-      getWallDimensionFromTileCount(dimensions.width, tileSize, grout),
-    );
-    setWallHeight(
-      getWallDimensionFromTileCount(dimensions.height, tileSize, grout),
-    );
-    setLayout(normalized);
+    if (savedProject.isLegacy) {
+      const dimensions = inferLayoutDimensions(
+        savedProject.cells,
+        getGridSize(wallWidth, tileSize, grout),
+      );
+      setWallWidth(
+        getWallDimensionFromTileCount(dimensions.width, tileSize, grout),
+      );
+      setWallHeight(
+        getWallDimensionFromTileCount(dimensions.height, tileSize, grout),
+      );
+    } else {
+      const nextTileSize = Number.isFinite(savedProject.tileSize)
+        ? savedProject.tileSize
+        : tileSize;
+      const nextGrout = Number.isFinite(savedProject.grout)
+        ? savedProject.grout
+        : grout;
+      const fallbackDimensions = inferLayoutDimensions(
+        savedProject.cells,
+        getGridSize(wallWidth, nextTileSize, nextGrout),
+      );
+      const savedColumns = Number.isFinite(savedProject.columns)
+        ? savedProject.columns
+        : fallbackDimensions.width;
+      const savedRows = Number.isFinite(savedProject.rows)
+        ? savedProject.rows
+        : fallbackDimensions.height;
+
+      setTileSize(nextTileSize);
+      setGrout(nextGrout);
+      setWallWidth(
+        Number.isFinite(savedProject.wallWidth)
+          ? savedProject.wallWidth
+          : getWallDimensionFromTileCount(
+              savedColumns,
+              nextTileSize,
+              nextGrout,
+            ),
+      );
+      setWallHeight(
+        Number.isFinite(savedProject.wallHeight)
+          ? savedProject.wallHeight
+          : getWallDimensionFromTileCount(
+              savedRows,
+              nextTileSize,
+              nextGrout,
+            ),
+      );
+
+      if (Number.isFinite(savedProject.zoom)) {
+        const nextZoom = clamp(savedProject.zoom, 20, 200);
+        setZoom(nextZoom);
+        setZoomInput(String(nextZoom));
+      }
+    }
+
+    setLayout(savedProject.cells);
     setLayoutName(savedLayout.name || '');
     setSelectedSavedLayoutId(savedLayout.id);
     resetPaintState();
@@ -422,7 +645,7 @@ function TilePreview({ onSaveLayout }) {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/layouts/${selectedSavedLayoutId}`,
+        `${API_BASE_URL}/users/${userId}/layouts/${selectedSavedLayoutId}`,
         {
           method: 'PUT',
           headers: {
@@ -430,13 +653,15 @@ function TilePreview({ onSaveLayout }) {
           },
           body: JSON.stringify({
             name: layoutName,
-            layout,
+            layout: buildProjectSnapshot(),
           }),
         },
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        setStatusMessage('Could not update layout.');
+        setStatusMessage(data.error || 'Could not update layout.');
         return;
       }
 
@@ -450,9 +675,12 @@ function TilePreview({ onSaveLayout }) {
 
   async function handleDeleteLayout(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/layouts/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/users/${userId}/layouts/${id}`,
+        {
+          method: 'DELETE',
+        },
+      );
 
       if (!response.ok) {
         setStatusMessage('Could not delete layout.');
@@ -477,6 +705,26 @@ function TilePreview({ onSaveLayout }) {
     fetchSavedLayouts(value);
   }
 
+  function buildProjectSnapshot() {
+    const columns = getGridSize(wallWidth, tileSize, grout);
+    const rows = getGridSize(wallHeight, tileSize, grout);
+
+    return {
+      version: 2,
+      cells: layout,
+      columns,
+      rows,
+      wallWidth,
+      wallHeight,
+      tileSize,
+      grout,
+      zoom,
+    };
+  }
+
+  const visibleUploadedTiles =
+    uploadedTilesUserId === userId ? uploadedTiles : [];
+  const tiles = [...initialTiles, ...visibleUploadedTiles];
   const defaultTile = tiles[0] || { id: 0, image: '', name: 'Empty tile' };
   const safeSavedLayouts = Array.isArray(savedLayouts) ? savedLayouts : [];
   const gridColumns = getGridSize(wallWidth, tileSize, grout);
@@ -492,13 +740,17 @@ function TilePreview({ onSaveLayout }) {
   return (
     <div className="layout-container">
       <div className="tile-library">
-        {tiles.map((tile) => (
+        {visibleUploadedTiles.length === 0 && (
+          <p className="section-label">Upload tiles to begin designing</p>
+        )}
+
+        {visibleUploadedTiles.map((tile) => (
           <div
-            key={tile.id}
+            key={tile.key}
             className={`library-tile ${
-              selectedTileId === tile.id ? 'active' : ''
+              selectedTileKey === tile.key ? 'active' : ''
             }`}
-            onClick={() => handleLibraryTileClick(tile.id)}
+            onClick={() => handleLibraryTileClick(tile.key)}
           >
             <button
               type="button"
@@ -526,7 +778,8 @@ function TilePreview({ onSaveLayout }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
           className="hidden-file-input"
           onChange={handleFileUpload}
         />
@@ -689,8 +942,7 @@ function TilePreview({ onSaveLayout }) {
             }}
           >
             {layout.map((cell) => {
-              const tile =
-                tiles.find((item) => item.id === cell.tileId) || defaultTile;
+              const tile = resolveTileForCell(cell, tiles, defaultTile);
 
               return (
                 <TileComponent

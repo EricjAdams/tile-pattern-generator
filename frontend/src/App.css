@@ -215,6 +215,75 @@ img {
   text-align: center;
 }
 
+.login-panel {
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: 24px;
+  background: rgba(249, 250, 251, 0.94);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
+}
+
+.login-panel h2 {
+  margin: 0 0 18px;
+  color: #10181e;
+  font-size: 1.45rem;
+}
+
+.login-panel .layout-name-label {
+  color: #475569;
+  text-align: left;
+}
+
+.login-panel .status-message {
+  color: #b91c1c;
+}
+
+.auth-mode-button {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-mode-button:hover {
+  color: #1d4ed8;
+}
+
+.user-bar {
+  max-width: 780px;
+  margin: 0 auto 18px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(249, 250, 251, 0.94);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
+}
+
+.user-bar .section-label {
+  margin-bottom: 2px;
+}
+
+.user-bar-name {
+  margin: 0;
+  color: #172128;
+  font-weight: 600;
+}
+
+.user-bar .ghost-button {
+  color: #172128;
+  border-color: rgba(71, 85, 105, 0.24);
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .action-group {
   display: flex;
   flex-wrap: wrap;
@@ -260,6 +329,43 @@ img {
   border: 1px solid #cfd7dc;
   background: #ffffff;
   color: #172128;
+}
+
+.password-input-wrapper {
+  position: relative;
+  margin: 0 0 18px;
+}
+
+.password-input-wrapper .password-input {
+  margin-bottom: 0;
+  padding-right: 44px;
+}
+
+.password-toggle-button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle-button:hover {
+  color: #172128;
+  background: #f1f5f9;
+}
+
+.password-toggle-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .preview-controls {

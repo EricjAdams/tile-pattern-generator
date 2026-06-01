@@ -1,19 +1,74 @@
+import { useState } from 'react';
 import './App.css';
 import TilePreview from './TilePreview';
 
+const API_BASE_URL = 'http://localhost:3001';
+const CURRENT_USER_STORAGE_KEY = 'tilePatternCurrentUser';
+const USERNAME_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getStoredCurrentUser() {
+  try {
+    const storedUser = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
+    return storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    console.warn('Stored user could not be loaded:', error);
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+    return null;
+  }
+}
+
+function validatePassword(password) {
+  if (password.length < 8 || password.length > 128) {
+    return 'Password must be 8-128 characters.';
+  }
+
+  if (
+    !/[A-Z]/.test(password) ||
+    !/[a-z]/.test(password) ||
+    !/[0-9]/.test(password) ||
+    !/[^A-Za-z0-9]/.test(password)
+  ) {
+    return 'Password must include uppercase, lowercase, number, and symbol characters.';
+  }
+
+  return '';
+}
+
 function App() {
-  const saveLayout = async (layout, name) => {
+  const [currentUser, setCurrentUser] = useState(getStoredCurrentUser);
+  const [authMode, setAuthMode] = useState('login');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginStatus, setLoginStatus] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] =
+    useState(false);
+
+  const saveLayout = async (projectSnapshot, name) => {
+    if (!currentUser) {
+      throw new Error('You must log in before saving layouts.');
+    }
+
     try {
-      const payload = { name, layout };
+      const payload = { name, layout: projectSnapshot };
       console.log('Sending save payload:', payload);
 
-      const response = await fetch('http://localhost:3001/users/1/layouts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${API_BASE_URL}/users/${currentUser.id}/layouts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
       const data = await response.json();
 
@@ -26,16 +81,334 @@ function App() {
       alert('Layout saved to database!');
     } catch (error) {
       console.error('Error saving layout:', error);
-      alert('Could not save layout.');
+      alert(error.message || 'Could not save layout.');
       throw error;
     }
+  };
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setLoginStatus('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: loginIdentifier,
+          password: loginPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginStatus(data.error || 'Login failed.');
+        return;
+      }
+
+      setCurrentUser(data);
+      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(data));
+      setLoginIdentifier('');
+      setLoginPassword('');
+      setLoginStatus('');
+    } catch (error) {
+      console.error('Login failed:', error);
+      setLoginStatus('Could not connect to login.');
+    }
+  };
+
+  const handleRegister = async (event) => {
+    event.preventDefault();
+    setLoginStatus('');
+
+    const username = registerUsername.trim();
+    const email = registerEmail.trim();
+
+    if (!USERNAME_PATTERN.test(username)) {
+      setLoginStatus(
+        'Username must be 5-30 characters and use only letters, numbers, underscores, or hyphens.',
+      );
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setLoginStatus('Enter a valid email address.');
+      return;
+    }
+
+    const passwordError = validatePassword(registerPassword);
+    if (passwordError) {
+      setLoginStatus(passwordError);
+      return;
+    }
+
+    if (registerPassword !== registerConfirmPassword) {
+      setLoginStatus('Passwords do not match.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          email,
+          password: registerPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginStatus(data.error || 'Registration failed.');
+        return;
+      }
+
+      setCurrentUser(data);
+      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(data));
+      setRegisterUsername('');
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterConfirmPassword('');
+      setLoginStatus('');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setLoginStatus('Could not connect to registration.');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+  };
+
+  const handleAuthModeChange = (nextMode) => {
+    setAuthMode(nextMode);
+    setLoginStatus('');
   };
 
   return (
     <div className="app-container">
       <div className="app-shell">
         <h1>Tile Pattern Generator</h1>
-        <TilePreview onSaveLayout={saveLayout} />
+
+        {currentUser ? (
+          <>
+            <div className="user-bar">
+              <div>
+                <p className="section-label">Signed in</p>
+                <p className="user-bar-name">
+                  {currentUser.username} · {currentUser.email}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </div>
+
+            <TilePreview userId={currentUser.id} onSaveLayout={saveLayout} />
+          </>
+        ) : (
+          <div className="login-panel">
+            <p className="section-label">
+              {authMode === 'login' ? 'Login' : 'Create Account'}
+            </p>
+            <h2>
+              {authMode === 'login'
+                ? 'Sign in to manage layouts'
+                : 'Create an account'}
+            </h2>
+
+            {authMode === 'login' ? (
+              <form onSubmit={handleLogin}>
+                <label className="layout-name-label" htmlFor="login-identifier">
+                  Username or email
+                </label>
+                <input
+                  id="login-identifier"
+                  className="layout-name-input"
+                  value={loginIdentifier}
+                  onChange={(event) => setLoginIdentifier(event.target.value)}
+                  autoComplete="username"
+                />
+
+                <label className="layout-name-label" htmlFor="login-password">
+                  Password
+                </label>
+                <div className="password-input-wrapper">
+                  <input
+                    id="login-password"
+                    className="layout-name-input password-input"
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(event) => setLoginPassword(event.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-button"
+                    aria-label={
+                      showLoginPassword ? 'Hide password' : 'Show password'
+                    }
+                    onClick={() =>
+                      setShowLoginPassword(
+                        (currentShowPassword) => !currentShowPassword,
+                      )
+                    }
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      focusable="false"
+                    >
+                      <path d="M12 5C6.8 5 3 12 3 12s3.8 7 9 7 9-7 9-7-3.8-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z" />
+                    </svg>
+                  </button>
+                </div>
+
+                {loginStatus && <p className="status-message">{loginStatus}</p>}
+
+                <button type="submit" className="control-button">
+                  Login
+                </button>
+
+                <button
+                  type="button"
+                  className="auth-mode-button"
+                  onClick={() => handleAuthModeChange('register')}
+                >
+                  Create account
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister}>
+                <label className="layout-name-label" htmlFor="register-username">
+                  Username
+                </label>
+                <input
+                  id="register-username"
+                  className="layout-name-input"
+                  value={registerUsername}
+                  onChange={(event) => setRegisterUsername(event.target.value)}
+                  autoComplete="username"
+                />
+
+                <label className="layout-name-label" htmlFor="register-email">
+                  Email
+                </label>
+                <input
+                  id="register-email"
+                  className="layout-name-input"
+                  type="email"
+                  value={registerEmail}
+                  onChange={(event) => setRegisterEmail(event.target.value)}
+                  autoComplete="email"
+                />
+
+                <label className="layout-name-label" htmlFor="register-password">
+                  Password
+                </label>
+                <div className="password-input-wrapper">
+                  <input
+                    id="register-password"
+                    className="layout-name-input password-input"
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    value={registerPassword}
+                    onChange={(event) =>
+                      setRegisterPassword(event.target.value)
+                    }
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-button"
+                    aria-label={
+                      showRegisterPassword ? 'Hide password' : 'Show password'
+                    }
+                    onClick={() =>
+                      setShowRegisterPassword(
+                        (currentShowPassword) => !currentShowPassword,
+                      )
+                    }
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      focusable="false"
+                    >
+                      <path d="M12 5C6.8 5 3 12 3 12s3.8 7 9 7 9-7 9-7-3.8-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z" />
+                    </svg>
+                  </button>
+                </div>
+
+                <label
+                  className="layout-name-label"
+                  htmlFor="register-confirm-password"
+                >
+                  Confirm password
+                </label>
+                <div className="password-input-wrapper">
+                  <input
+                    id="register-confirm-password"
+                    className="layout-name-input password-input"
+                    type={showRegisterConfirmPassword ? 'text' : 'password'}
+                    value={registerConfirmPassword}
+                    onChange={(event) =>
+                      setRegisterConfirmPassword(event.target.value)
+                    }
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-button"
+                    aria-label={
+                      showRegisterConfirmPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                    }
+                    onClick={() =>
+                      setShowRegisterConfirmPassword(
+                        (currentShowPassword) => !currentShowPassword,
+                      )
+                    }
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      focusable="false"
+                    >
+                      <path d="M12 5C6.8 5 3 12 3 12s3.8 7 9 7 9-7 9-7-3.8-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z" />
+                    </svg>
+                  </button>
+                </div>
+
+                {loginStatus && <p className="status-message">{loginStatus}</p>}
+
+                <button type="submit" className="control-button">
+                  Create Account
+                </button>
+
+                <button
+                  type="button"
+                  className="auth-mode-button"
+                  onClick={() => handleAuthModeChange('login')}
+                >
+                  Sign in instead
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </div>
 
       <footer className="footer">

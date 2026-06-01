@@ -32,3 +32,10 @@ lerna-debug.log*
 # Project extras
 ProgressSnaps/AWS Key/
 *.pem
+
+# Local uploaded tile assets
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/tiles/
+backend/uploads/tiles/**
+!backend/uploads/tiles/.gitkeep
