@@ -278,10 +278,22 @@ img {
   font-weight: 600;
 }
 
+.user-bar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .user-bar .ghost-button {
   color: #172128;
   border-color: rgba(71, 85, 105, 0.24);
   background: rgba(255, 255, 255, 0.7);
+}
+
+.user-bar .danger-button {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.24);
 }
 
 .action-group {
@@ -422,6 +434,14 @@ img {
 .control-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(59, 130, 246, 0.18);
+}
+
+.danger-control-button {
+  background: #dc2626;
+}
+
+.danger-control-button:hover {
+  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.18);
 }
 
 .zoom-controls {

@@ -49,6 +49,13 @@ function App() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] =
     useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountConfirmation, setDeleteAccountConfirmation] =
+    useState('');
+  const [deleteAccountStatus, setDeleteAccountStatus] = useState('');
+  const [showDeleteAccountPassword, setShowDeleteAccountPassword] =
+    useState(false);
 
   const saveLayout = async (projectSnapshot, name) => {
     if (!currentUser) {
@@ -186,11 +193,76 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+    setShowDeleteAccountDialog(false);
+    setDeleteAccountPassword('');
+    setDeleteAccountConfirmation('');
+    setDeleteAccountStatus('');
   };
 
   const handleAuthModeChange = (nextMode) => {
     setAuthMode(nextMode);
     setLoginStatus('');
+  };
+
+  const handleOpenDeleteAccountDialog = () => {
+    setDeleteAccountPassword('');
+    setDeleteAccountConfirmation('');
+    setDeleteAccountStatus('');
+    setShowDeleteAccountPassword(false);
+    setShowDeleteAccountDialog(true);
+  };
+
+  const handleCancelDeleteAccount = () => {
+    setShowDeleteAccountDialog(false);
+    setDeleteAccountPassword('');
+    setDeleteAccountConfirmation('');
+    setDeleteAccountStatus('');
+    setShowDeleteAccountPassword(false);
+  };
+
+  const handleDeleteAccount = async (event) => {
+    event.preventDefault();
+    setDeleteAccountStatus('');
+
+    if (!currentUser) {
+      return;
+    }
+
+    if (!deleteAccountPassword || deleteAccountConfirmation !== 'DELETE') {
+      setDeleteAccountStatus('Enter your password and type DELETE to confirm.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${currentUser.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: deleteAccountPassword,
+          confirmation: deleteAccountConfirmation,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteAccountStatus(data.error || 'Account deletion failed.');
+        return;
+      }
+
+      setCurrentUser(null);
+      localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+      setShowDeleteAccountDialog(false);
+      setDeleteAccountPassword('');
+      setDeleteAccountConfirmation('');
+      setDeleteAccountStatus('');
+      setLoginStatus('Account deleted.');
+    } catch (error) {
+      console.error('Account deletion failed:', error);
+      setDeleteAccountStatus('Could not connect to delete account.');
+    }
   };
 
   return (
@@ -207,16 +279,114 @@ function App() {
                   {currentUser.username} · {currentUser.email}
                 </p>
               </div>
-              <button
-                type="button"
-                className="ghost-button"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
+              <div className="user-bar-actions">
+                <button
+                  type="button"
+                  className="ghost-button danger-button"
+                  onClick={handleOpenDeleteAccountDialog}
+                >
+                  Delete Account
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
 
             <TilePreview userId={currentUser.id} onSaveLayout={saveLayout} />
+
+            {showDeleteAccountDialog && (
+              <div className="confirm-overlay">
+                <div className="confirm-dialog">
+                  <form onSubmit={handleDeleteAccount}>
+                    <p>
+                      This will delete your account. Your layouts, uploaded tile
+                      metadata, and uploaded image files will be retained.
+                    </p>
+
+                    <label
+                      className="layout-name-label"
+                      htmlFor="delete-account-password"
+                    >
+                      Confirm password
+                    </label>
+                    <div className="password-input-wrapper">
+                      <input
+                        id="delete-account-password"
+                        className="layout-name-input password-input"
+                        type={showDeleteAccountPassword ? 'text' : 'password'}
+                        value={deleteAccountPassword}
+                        onChange={(event) =>
+                          setDeleteAccountPassword(event.target.value)
+                        }
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-button"
+                        aria-label={
+                          showDeleteAccountPassword
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
+                        onClick={() =>
+                          setShowDeleteAccountPassword(
+                            (currentShowPassword) => !currentShowPassword,
+                          )
+                        }
+                      >
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          focusable="false"
+                        >
+                          <path d="M12 5C6.8 5 3 12 3 12s3.8 7 9 7 9-7 9-7-3.8-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <label
+                      className="layout-name-label"
+                      htmlFor="delete-account-confirmation"
+                    >
+                      Type DELETE
+                    </label>
+                    <input
+                      id="delete-account-confirmation"
+                      className="layout-name-input"
+                      value={deleteAccountConfirmation}
+                      onChange={(event) =>
+                        setDeleteAccountConfirmation(event.target.value)
+                      }
+                    />
+
+                    {deleteAccountStatus && (
+                      <p className="status-message">{deleteAccountStatus}</p>
+                    )}
+
+                    <div className="confirm-actions">
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={handleCancelDeleteAccount}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="control-button danger-control-button"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="login-panel">

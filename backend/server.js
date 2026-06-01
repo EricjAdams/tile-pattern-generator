@@ -130,6 +130,14 @@ function getSafeUser(user) {
   };
 }
 
+async function isValidUserPassword(user, password) {
+  if (user.password_hash) {
+    return bcrypt.compare(password, user.password_hash);
+  }
+
+  return Boolean(user.password && user.password === password);
+}
+
 function normalizeTileRow(tile) {
   return {
     id: tile.id,
@@ -196,6 +204,7 @@ function handleLegacyLogin(identifier, password, res) {
     FROM users
     WHERE (email = ? OR username = ?)
       AND password = ?
+      AND deleted_at IS NULL
     LIMIT 1
   `;
 
@@ -318,10 +327,11 @@ app.post('/login', async (req, res) => {
   const normalizedIdentifier = normalizeIdentifier(identifier);
 
   const query = `
-    SELECT id, username, email, password, password_hash
+    SELECT id, username, email, password, password_hash, deleted_at
     FROM users
-    WHERE username_normalized = ?
-       OR email_normalized = ?
+    WHERE (username_normalized = ?
+       OR email_normalized = ?)
+      AND deleted_at IS NULL
     LIMIT 1
   `;
 
@@ -376,6 +386,71 @@ app.post('/login', async (req, res) => {
     } catch (loginErr) {
       console.error('Login failed:', loginErr);
       return res.status(500).json({ error: 'Login failed' });
+    }
+  });
+});
+
+// SOFT DELETE user account
+app.delete('/users/:userId', (req, res) => {
+  const { userId } = req.params;
+  const { password, confirmation } = req.body;
+
+  if (!/^\d+$/.test(String(userId))) {
+    return res.status(400).json({ error: 'Valid user id is required.' });
+  }
+
+  if (!password || confirmation !== 'DELETE') {
+    return res.status(400).json({ error: 'Password and DELETE confirmation are required.' });
+  }
+
+  const query = `
+    SELECT id, username, email, password, password_hash
+    FROM users
+    WHERE id = ?
+      AND deleted_at IS NULL
+    LIMIT 1
+  `;
+
+  db.query(query, [userId], async (err, results) => {
+    if (err) {
+      console.error('Account deletion lookup failed:', err);
+      return res.status(500).json({ error: 'Account deletion failed' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    try {
+      const user = results[0];
+      const isValidPassword = await isValidUserPassword(user, password);
+
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Password confirmation failed.' });
+      }
+
+      const deleteQuery = `
+        UPDATE users
+        SET deleted_at = NOW()
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `;
+
+      db.query(deleteQuery, [userId], (deleteErr, result) => {
+        if (deleteErr) {
+          console.error('Account deletion failed:', deleteErr);
+          return res.status(500).json({ error: 'Account deletion failed' });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Account not found' });
+        }
+
+        res.json({ message: 'Account deleted successfully' });
+      });
+    } catch (deleteErr) {
+      console.error('Account deletion failed:', deleteErr);
+      return res.status(500).json({ error: 'Account deletion failed' });
     }
   });
 });
