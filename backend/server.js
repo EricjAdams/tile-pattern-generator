@@ -11,6 +11,7 @@ const app = express();
 const PORT = 3001;
 const BCRYPT_COST = 12;
 const GENERIC_LOGIN_ERROR = 'Invalid username/email or password';
+const LEGACY_LAYOUT_ROUTE_ERROR = 'Use user-scoped layout routes.';
 const USERNAME_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UPLOAD_ROOT = path.join(__dirname, 'uploads');
@@ -27,6 +28,7 @@ const TILE_EXTENSION_BY_MIME_TYPE = {
   'image/png': '.png',
   'image/webp': '.webp',
 };
+const sessions = new Map();
 
 app.use(cors());
 app.use(express.json());
@@ -130,6 +132,56 @@ function getSafeUser(user) {
   };
 }
 
+function createSession(user) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const safeUser = getSafeUser(user);
+
+  sessions.set(token, {
+    userId: safeUser.id,
+    username: safeUser.username,
+    email: safeUser.email,
+    createdAt: Date.now(),
+  });
+
+  return {
+    ...safeUser,
+    token,
+  };
+}
+
+function authenticateRequest(req, res, next) {
+  const authHeader = req.get('Authorization') || '';
+  const [scheme, token] = authHeader.split(' ');
+
+  if (scheme !== 'Bearer' || !token) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  const session = sessions.get(token);
+
+  if (!session) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  req.authenticatedUser = session;
+  req.authToken = token;
+  next();
+}
+
+function requireMatchingUser(req, res, next) {
+  const requestedUserId = Number(req.params.userId);
+
+  if (!Number.isInteger(requestedUserId) || requestedUserId <= 0) {
+    return res.status(400).json({ error: 'Valid user id is required.' });
+  }
+
+  if (Number(req.authenticatedUser.userId) !== requestedUserId) {
+    return res.status(403).json({ error: 'You are not allowed to access this user resource.' });
+  }
+
+  next();
+}
+
 async function isValidUserPassword(user, password) {
   if (user.password_hash) {
     return bcrypt.compare(password, user.password_hash);
@@ -218,7 +270,7 @@ function handleLegacyLogin(identifier, password, res) {
       return res.status(401).json({ error: GENERIC_LOGIN_ERROR });
     }
 
-    res.json(getSafeUser(results[0]));
+    res.json(createSession(results[0]));
   });
 }
 
@@ -307,9 +359,11 @@ app.post('/register', async (req, res) => {
         }
 
         res.status(201).json({
-          id: result.insertId,
-          username,
-          email,
+          ...createSession({
+            id: result.insertId,
+            username,
+            email,
+          }),
         });
       },
     );
@@ -359,7 +413,7 @@ app.post('/login', async (req, res) => {
           return res.status(401).json({ error: GENERIC_LOGIN_ERROR });
         }
 
-        return res.json(getSafeUser(user));
+        return res.json(createSession(user));
       }
 
       if (user.password && user.password === password) {
@@ -376,7 +430,7 @@ app.post('/login', async (req, res) => {
             return res.status(500).json({ error: 'Login failed' });
           }
 
-          return res.json(getSafeUser(user));
+          return res.json(createSession(user));
         });
 
         return;
@@ -390,8 +444,14 @@ app.post('/login', async (req, res) => {
   });
 });
 
+// LOGOUT user
+app.post('/logout', authenticateRequest, (req, res) => {
+  sessions.delete(req.authToken);
+  res.json({ message: 'Logged out successfully' });
+});
+
 // SOFT DELETE user account
-app.delete('/users/:userId', (req, res) => {
+app.delete('/users/:userId', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
   const { password, confirmation } = req.body;
 
@@ -446,6 +506,7 @@ app.delete('/users/:userId', (req, res) => {
           return res.status(404).json({ error: 'Account not found' });
         }
 
+        sessions.delete(req.authToken);
         res.json({ message: 'Account deleted successfully' });
       });
     } catch (deleteErr) {
@@ -456,7 +517,7 @@ app.delete('/users/:userId', (req, res) => {
 });
 
 // READ uploaded tiles for one user
-app.get('/users/:userId/tiles', (req, res) => {
+app.get('/users/:userId/tiles', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
 
   if (!/^\d+$/.test(String(userId))) {
@@ -493,7 +554,7 @@ app.get('/users/:userId/tiles', (req, res) => {
 });
 
 // CREATE uploaded tiles for one user
-app.post('/users/:userId/tiles', (req, res) => {
+app.post('/users/:userId/tiles', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
 
   if (!/^\d+$/.test(String(userId))) {
@@ -577,7 +638,7 @@ app.post('/users/:userId/tiles', (req, res) => {
 });
 
 // SEARCH + READ all layouts for one user
-app.get('/users/:userId/layouts', (req, res) => {
+app.get('/users/:userId/layouts', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
   const search = req.query.search || '';
 
@@ -607,7 +668,7 @@ app.get('/users/:userId/layouts', (req, res) => {
 });
 
 // CREATE layout
-app.post('/users/:userId/layouts', (req, res) => {
+app.post('/users/:userId/layouts', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
   const { name, layout } = req.body;
   const trimmedName = String(name || '').trim();
@@ -648,7 +709,7 @@ app.post('/users/:userId/layouts', (req, res) => {
 });
 
 // UPDATE layout for one user
-app.put('/users/:userId/layouts/:id', (req, res) => {
+app.put('/users/:userId/layouts/:id', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId, id } = req.params;
   const { name, layout } = req.body;
   const trimmedName = String(name || '').trim();
@@ -690,7 +751,7 @@ app.put('/users/:userId/layouts/:id', (req, res) => {
 });
 
 // DELETE layout for one user
-app.delete('/users/:userId/layouts/:id', (req, res) => {
+app.delete('/users/:userId/layouts/:id', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId, id } = req.params;
 
   const query = `
@@ -715,113 +776,17 @@ app.delete('/users/:userId/layouts/:id', (req, res) => {
 
 // READ one layout
 app.get('/layouts/:id', (req, res) => {
-  const { id } = req.params;
-
-  const query = `
-    SELECT id, userId, name, layout
-    FROM layouts
-    WHERE id = ?
-  `;
-
-  db.query(query, [id], (err, results) => {
-    if (err) {
-      console.error('Database fetch failed:', err);
-      return res.status(500).json({ error: 'Database fetch failed' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'Layout not found' });
-    }
-
-    const item = results[0];
-
-    res.json({
-      id: item.id,
-      userId: item.userId,
-      name: item.name,
-      layout: normalizeLayoutData(item.layout),
-    });
-  });
+  res.status(410).json({ error: LEGACY_LAYOUT_ROUTE_ERROR });
 });
 
 // UPDATE layout
 app.put('/layouts/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, layout } = req.body;
-  const trimmedName = String(name || '').trim();
-
-  if (!trimmedName || !isValidLayoutPayload(layout)) {
-    return res.status(400).json({ error: 'Name and layout data are required' });
-  }
-
-  const ownerQuery = `
-    SELECT userId
-    FROM layouts
-    WHERE id = ?
-  `;
-
-  db.query(ownerQuery, [id], (ownerErr, ownerResults) => {
-    if (ownerErr) {
-      console.error('Database fetch failed:', ownerErr);
-      return res.status(500).json({ error: 'Database fetch failed' });
-    }
-
-    if (ownerResults.length === 0) {
-      return res.status(404).json({ error: 'Layout not found' });
-    }
-
-    const userId = ownerResults[0].userId;
-
-    findDuplicateLayoutName(userId, trimmedName, id, (duplicateErr, duplicateResults) => {
-      if (duplicateErr) {
-        console.error('Layout duplicate check failed:', duplicateErr);
-        return res.status(500).json({ error: 'Layout duplicate check failed' });
-      }
-
-      if (duplicateResults.length > 0) {
-        return res.status(409).json({ error: 'A layout with this name already exists.' });
-      }
-
-      const query = `
-        UPDATE layouts
-        SET name = ?, layout = ?
-        WHERE id = ?
-      `;
-
-      db.query(query, [trimmedName, JSON.stringify(layout), id], (err, result) => {
-        if (err) {
-          console.error('Database update failed:', err);
-          return res.status(500).json({ error: 'Database update failed' });
-        }
-
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ error: 'Layout not found' });
-        }
-
-        res.json({ message: 'Layout updated successfully' });
-      });
-    });
-  });
+  res.status(410).json({ error: LEGACY_LAYOUT_ROUTE_ERROR });
 });
 
 // DELETE layout
 app.delete('/layouts/:id', (req, res) => {
-  const { id } = req.params;
-
-  const query = 'DELETE FROM layouts WHERE id = ?';
-
-  db.query(query, [id], (err, result) => {
-    if (err) {
-      console.error('Database delete failed:', err);
-      return res.status(500).json({ error: 'Database delete failed' });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Layout not found' });
-    }
-
-    res.json({ message: 'Layout deleted successfully' });
-  });
+  res.status(410).json({ error: LEGACY_LAYOUT_ROUTE_ERROR });
 });
 
 app.listen(PORT, () => {

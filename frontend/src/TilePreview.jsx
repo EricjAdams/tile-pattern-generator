@@ -179,7 +179,7 @@ function normalizeUploadedTile(tile) {
   };
 }
 
-function TilePreview({ userId, onSaveLayout }) {
+function TilePreview({ userId, authToken, onSaveLayout }) {
   const [uploadedTiles, setUploadedTiles] = useState([]);
   const [uploadedTilesUserId, setUploadedTilesUserId] = useState(null);
   const [layout, setLayout] = useState(initialLayout);
@@ -202,6 +202,19 @@ function TilePreview({ userId, onSaveLayout }) {
 
   const fileInputRef = useRef(null);
   const paintRotationRef = useRef(0);
+
+  const getAuthHeaders = useCallback(() => {
+    return {
+      Authorization: `Bearer ${authToken}`,
+    };
+  }, [authToken]);
+
+  const getJsonAuthHeaders = useCallback(() => {
+    return {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    };
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     function handlePointerUp() {
@@ -233,6 +246,9 @@ function TilePreview({ userId, onSaveLayout }) {
         `${API_BASE_URL}/users/${userId}/layouts?search=${encodeURIComponent(
           searchValue,
         )}`,
+        {
+          headers: getAuthHeaders(),
+        },
       );
 
       if (!response.ok) {
@@ -247,7 +263,7 @@ function TilePreview({ userId, onSaveLayout }) {
       setSavedLayouts([]);
       setStatusMessage('Could not connect to saved layouts.');
     }
-  }, [userId]);
+  }, [getAuthHeaders, userId]);
 
   const fetchUploadedTiles = useCallback(async () => {
     setUploadedTiles([]);
@@ -255,7 +271,9 @@ function TilePreview({ userId, onSaveLayout }) {
     setSelectedTileKey(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/tiles`);
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/tiles`, {
+        headers: getAuthHeaders(),
+      });
 
       if (!response.ok) {
         setStatusMessage('Could not load uploaded tiles.');
@@ -273,7 +291,7 @@ function TilePreview({ userId, onSaveLayout }) {
       console.error('Error fetching uploaded tiles:', error);
       setStatusMessage('Could not connect to uploaded tiles.');
     }
-  }, [userId]);
+  }, [getAuthHeaders, userId]);
 
   useEffect(() => {
     const loadSavedLayouts = window.setTimeout(() => {
@@ -417,6 +435,7 @@ function TilePreview({ userId, onSaveLayout }) {
     try {
       const response = await fetch(`${API_BASE_URL}/users/${userId}/tiles`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData,
       });
       const data = await response.json().catch(() => null);
@@ -648,9 +667,7 @@ function TilePreview({ userId, onSaveLayout }) {
         `${API_BASE_URL}/users/${userId}/layouts/${selectedSavedLayoutId}`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getJsonAuthHeaders(),
           body: JSON.stringify({
             name: layoutName,
             layout: buildProjectSnapshot(),
@@ -679,6 +696,7 @@ function TilePreview({ userId, onSaveLayout }) {
         `${API_BASE_URL}/users/${userId}/layouts/${id}`,
         {
           method: 'DELETE',
+          headers: getAuthHeaders(),
         },
       );
 

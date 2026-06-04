@@ -10,7 +10,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function getStoredCurrentUser() {
   try {
     const storedUser = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-    return storedUser ? JSON.parse(storedUser) : null;
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    return parsedUser?.token ? parsedUser : null;
   } catch (error) {
     console.warn('Stored user could not be loaded:', error);
     localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
@@ -57,6 +58,13 @@ function App() {
   const [showDeleteAccountPassword, setShowDeleteAccountPassword] =
     useState(false);
 
+  function getAuthHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${currentUser.token}`,
+    };
+  }
+
   const saveLayout = async (projectSnapshot, name) => {
     if (!currentUser) {
       throw new Error('You must log in before saving layouts.');
@@ -70,9 +78,7 @@ function App() {
         `${API_BASE_URL}/users/${currentUser.id}/layouts`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify(payload),
         },
       );
@@ -190,13 +196,28 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
-    setShowDeleteAccountDialog(false);
-    setDeleteAccountPassword('');
-    setDeleteAccountConfirmation('');
-    setDeleteAccountStatus('');
+  const handleLogout = async () => {
+    const token = currentUser?.token;
+
+    try {
+      if (token) {
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setCurrentUser(null);
+      localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+      setShowDeleteAccountDialog(false);
+      setDeleteAccountPassword('');
+      setDeleteAccountConfirmation('');
+      setDeleteAccountStatus('');
+    }
   };
 
   const handleAuthModeChange = (nextMode) => {
@@ -236,9 +257,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/users/${currentUser.id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           password: deleteAccountPassword,
           confirmation: deleteAccountConfirmation,
@@ -297,7 +316,11 @@ function App() {
               </div>
             </div>
 
-            <TilePreview userId={currentUser.id} onSaveLayout={saveLayout} />
+            <TilePreview
+              userId={currentUser.id}
+              authToken={currentUser.token}
+              onSaveLayout={saveLayout}
+            />
 
             {showDeleteAccountDialog && (
               <div className="confirm-overlay">
