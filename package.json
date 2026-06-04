@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "seed": "npm --prefix backend run seed"
+  },
   "devDependencies": {
     "prettier": "^3.8.3"
   }
