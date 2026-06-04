@@ -129,6 +129,7 @@ function getSafeUser(user) {
     id: user.id,
     username: user.username,
     email: user.email,
+    role: user.role || 'user',
   };
 }
 
@@ -140,6 +141,7 @@ function createSession(user) {
     userId: safeUser.id,
     username: safeUser.username,
     email: safeUser.email,
+    role: safeUser.role,
     createdAt: Date.now(),
   });
 
@@ -177,6 +179,14 @@ function requireMatchingUser(req, res, next) {
 
   if (Number(req.authenticatedUser.userId) !== requestedUserId) {
     return res.status(403).json({ error: 'You are not allowed to access this user resource.' });
+  }
+
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.authenticatedUser.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
   }
 
   next();
@@ -252,7 +262,7 @@ function findDuplicateLayoutName(userId, name, excludedLayoutId, callback) {
 
 function handleLegacyLogin(identifier, password, res) {
   const query = `
-    SELECT id, username, email
+    SELECT id, username, email, role
     FROM users
     WHERE (email = ? OR username = ?)
       AND password = ?
@@ -363,6 +373,7 @@ app.post('/register', async (req, res) => {
             id: result.insertId,
             username,
             email,
+            role: 'user',
           }),
         });
       },
@@ -381,7 +392,7 @@ app.post('/login', async (req, res) => {
   const normalizedIdentifier = normalizeIdentifier(identifier);
 
   const query = `
-    SELECT id, username, email, password, password_hash, deleted_at
+    SELECT id, username, email, role, password, password_hash, deleted_at
     FROM users
     WHERE (username_normalized = ?
        OR email_normalized = ?)
@@ -448,6 +459,78 @@ app.post('/login', async (req, res) => {
 app.post('/logout', authenticateRequest, (req, res) => {
   sessions.delete(req.authToken);
   res.json({ message: 'Logged out successfully' });
+});
+
+// READ all users for admins
+app.get('/admin/users', authenticateRequest, requireAdmin, (req, res) => {
+  const query = `
+    SELECT id, username, email, role, created_at, deleted_at
+    FROM users
+    ORDER BY id ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Admin user fetch failed:', err);
+      return res.status(500).json({ error: 'Admin user fetch failed' });
+    }
+
+    res.json(results);
+  });
+});
+
+// READ all layouts for admins
+app.get('/admin/layouts', authenticateRequest, requireAdmin, (req, res) => {
+  const query = `
+    SELECT
+      layouts.id,
+      layouts.userId,
+      layouts.name,
+      layouts.layout,
+      users.username AS ownerUsername,
+      users.email AS ownerEmail
+    FROM layouts
+    LEFT JOIN users ON users.id = layouts.userId
+    ORDER BY layouts.id DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Admin layout fetch failed:', err);
+      return res.status(500).json({ error: 'Admin layout fetch failed' });
+    }
+
+    const layouts = results.map((item) => ({
+      id: item.id,
+      userId: item.userId,
+      name: item.name,
+      layout: normalizeLayoutData(item.layout),
+      ownerUsername: item.ownerUsername,
+      ownerEmail: item.ownerEmail,
+    }));
+
+    res.json(layouts);
+  });
+});
+
+// DELETE any layout for admins
+app.delete('/admin/layouts/:id', authenticateRequest, requireAdmin, (req, res) => {
+  const { id } = req.params;
+
+  const query = 'DELETE FROM layouts WHERE id = ?';
+
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error('Admin layout delete failed:', err);
+      return res.status(500).json({ error: 'Admin layout delete failed' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Layout not found' });
+    }
+
+    res.json({ message: 'Layout deleted successfully' });
+  });
 });
 
 // SOFT DELETE user account

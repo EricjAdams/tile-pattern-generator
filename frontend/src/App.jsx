@@ -57,6 +57,10 @@ function App() {
   const [deleteAccountStatus, setDeleteAccountStatus] = useState('');
   const [showDeleteAccountPassword, setShowDeleteAccountPassword] =
     useState(false);
+  const [activeView, setActiveView] = useState('designer');
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminLayouts, setAdminLayouts] = useState([]);
+  const [adminStatus, setAdminStatus] = useState('');
 
   function getAuthHeaders() {
     return {
@@ -127,6 +131,8 @@ function App() {
       setLoginIdentifier('');
       setLoginPassword('');
       setLoginStatus('');
+      setActiveView('designer');
+      setAdminStatus('');
     } catch (error) {
       console.error('Login failed:', error);
       setLoginStatus('Could not connect to login.');
@@ -190,6 +196,8 @@ function App() {
       setRegisterPassword('');
       setRegisterConfirmPassword('');
       setLoginStatus('');
+      setActiveView('designer');
+      setAdminStatus('');
     } catch (error) {
       console.error('Registration failed:', error);
       setLoginStatus('Could not connect to registration.');
@@ -217,6 +225,10 @@ function App() {
       setDeleteAccountPassword('');
       setDeleteAccountConfirmation('');
       setDeleteAccountStatus('');
+      setActiveView('designer');
+      setAdminUsers([]);
+      setAdminLayouts([]);
+      setAdminStatus('');
     }
   };
 
@@ -278,9 +290,84 @@ function App() {
       setDeleteAccountConfirmation('');
       setDeleteAccountStatus('');
       setLoginStatus('Account deleted.');
+      setActiveView('designer');
+      setAdminUsers([]);
+      setAdminLayouts([]);
     } catch (error) {
       console.error('Account deletion failed:', error);
       setDeleteAccountStatus('Could not connect to delete account.');
+    }
+  };
+
+  const fetchAdminDashboard = async () => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      setAdminStatus('Access Denied');
+      return;
+    }
+
+    setAdminStatus('');
+
+    try {
+      const [usersResponse, layoutsResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/admin/users`, {
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${API_BASE_URL}/admin/layouts`, {
+          headers: getAuthHeaders(),
+        }),
+      ]);
+
+      const usersData = await usersResponse.json();
+      const layoutsData = await layoutsResponse.json();
+
+      if (!usersResponse.ok) {
+        setAdminStatus(usersData.error || 'Could not load admin users.');
+        return;
+      }
+
+      if (!layoutsResponse.ok) {
+        setAdminStatus(layoutsData.error || 'Could not load admin layouts.');
+        return;
+      }
+
+      setAdminUsers(Array.isArray(usersData) ? usersData : []);
+      setAdminLayouts(Array.isArray(layoutsData) ? layoutsData : []);
+    } catch (error) {
+      console.error('Admin dashboard fetch failed:', error);
+      setAdminStatus('Could not connect to admin dashboard.');
+    }
+  };
+
+  const handleOpenAdminDashboard = () => {
+    setActiveView('admin');
+    fetchAdminDashboard();
+  };
+
+  const handleDeleteAdminLayout = async (layoutId) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      setAdminStatus('Access Denied');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/layouts/${layoutId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAdminStatus(data.error || 'Could not delete layout.');
+        return;
+      }
+
+      setAdminLayouts((currentLayouts) =>
+        currentLayouts.filter((layout) => layout.id !== layoutId),
+      );
+      setAdminStatus('Layout deleted.');
+    } catch (error) {
+      console.error('Admin layout delete failed:', error);
+      setAdminStatus('Could not connect to delete layout.');
     }
   };
 
@@ -299,6 +386,19 @@ function App() {
                 </p>
               </div>
               <div className="user-bar-actions">
+                {currentUser.role === 'admin' && (
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={
+                      activeView === 'admin'
+                        ? () => setActiveView('designer')
+                        : handleOpenAdminDashboard
+                    }
+                  >
+                    {activeView === 'admin' ? 'Designer' : 'Admin'}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="ghost-button danger-button"
@@ -316,11 +416,108 @@ function App() {
               </div>
             </div>
 
-            <TilePreview
-              userId={currentUser.id}
-              authToken={currentUser.token}
-              onSaveLayout={saveLayout}
-            />
+            {activeView === 'admin' ? (
+              <section className="admin-dashboard">
+                {currentUser.role !== 'admin' ? (
+                  <p className="status-message">Access Denied</p>
+                ) : (
+                  <>
+                    <div className="admin-header">
+                      <div>
+                        <p className="section-label">Admin</p>
+                        <h2>Admin Dashboard</h2>
+                      </div>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={fetchAdminDashboard}
+                      >
+                        Refresh
+                      </button>
+                    </div>
+
+                    {adminStatus && (
+                      <p className="status-message">{adminStatus}</p>
+                    )}
+
+                    <div className="admin-section">
+                      <h3>Users</h3>
+                      <div className="admin-table-wrapper">
+                        <table className="admin-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Username</th>
+                              <th>Email</th>
+                              <th>Role</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminUsers.map((user) => (
+                              <tr key={user.id}>
+                                <td>{user.id}</td>
+                                <td>{user.username}</td>
+                                <td>{user.email}</td>
+                                <td>{user.role}</td>
+                                <td>
+                                  {user.deleted_at ? 'Deleted' : 'Active'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="admin-section">
+                      <h3>Layouts</h3>
+                      <div className="admin-table-wrapper">
+                        <table className="admin-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Name</th>
+                              <th>Owner</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminLayouts.map((layout) => (
+                              <tr key={layout.id}>
+                                <td>{layout.id}</td>
+                                <td>{layout.name}</td>
+                                <td>
+                                  {layout.ownerUsername || 'Unknown'} ·{' '}
+                                  {layout.ownerEmail || `User ${layout.userId}`}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="admin-delete-button"
+                                    onClick={() =>
+                                      handleDeleteAdminLayout(layout.id)
+                                    }
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </section>
+            ) : (
+              <TilePreview
+                userId={currentUser.id}
+                authToken={currentUser.token}
+                onSaveLayout={saveLayout}
+              />
+            )}
 
             {showDeleteAccountDialog && (
               <div className="confirm-overlay">

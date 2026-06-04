@@ -296,6 +296,88 @@ img {
   border-color: rgba(185, 28, 28, 0.24);
 }
 
+.admin-dashboard {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px;
+  background: rgba(249, 250, 251, 0.94);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
+}
+
+.admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-header h2,
+.admin-section h3 {
+  margin: 0;
+  color: #10181e;
+}
+
+.admin-section {
+  margin-top: 22px;
+}
+
+.admin-section h3 {
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+}
+
+.admin-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  color: #172128;
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+.admin-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-delete-button {
+  min-height: 34px;
+  border: 1px solid rgba(185, 28, 28, 0.24);
+  border-radius: 10px;
+  background: #fff;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.admin-delete-button:hover {
+  background: #fef2f2;
+}
+
 .action-group {
   display: flex;
   flex-wrap: wrap;
