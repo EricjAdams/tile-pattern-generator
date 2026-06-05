@@ -1,8 +1,10 @@
 {
   "scripts": {
+    "benchmark": "autocannon -c 25 -d 15 http://localhost:3001/",
     "seed": "npm --prefix backend run seed"
   },
   "devDependencies": {
+    "autocannon": "^8.0.0",
     "prettier": "^3.8.3"
   }
 }
