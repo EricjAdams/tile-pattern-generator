@@ -175,6 +175,129 @@ Each seeded layout should report version `2`.
 6. If your account has the `admin` role, open the Admin Dashboard and confirm sample users and layouts appear.
 7. Run `npm run seed` again and confirm it skips the existing sample records instead of duplicating them.
 
+## Recorded Seeded-Data Performance Evidence
+
+Date recorded: June 6, 2026
+
+The seed script was run against the existing local database:
+
+```bash
+npm run seed
+```
+
+Result:
+
+```text
+Sample data seed complete.
+users created: 0
+layouts created: 1
+users skipped: 25
+layouts skipped: 249
+total execution time: 0.27s
+```
+
+This run found the sample users already present and created one missing sample layout, leaving the seeded dataset complete.
+
+The seeded data was verified with:
+
+```bash
+mysql -uroot -ppassword123 tile_pattern_generator -e "SELECT COUNT(*) AS total_users FROM users; SELECT COUNT(*) AS total_layouts FROM layouts; SELECT COUNT(*) AS sample_users FROM users WHERE username REGEXP '^sample_'; SELECT COUNT(*) AS sample_layouts FROM layouts WHERE name LIKE '[SAMPLE]%'; SELECT role, COUNT(*) AS sample_users FROM users WHERE username REGEXP '^sample_' GROUP BY role;"
+```
+
+Result:
+
+```text
+total_users
+37
+total_layouts
+275
+sample_users
+25
+sample_layouts
+250
+role    sample_users
+user    25
+```
+
+The backend was started with:
+
+```bash
+node backend/server.js
+```
+
+Result:
+
+```text
+Server running on http://localhost:3001
+Connected to MySQL
+```
+
+Performance was measured against the existing authenticated sample-user API routes. The test user was `sample_avery_01` with password `SamplePass123!`.
+
+```bash
+LOGIN_JSON=$(curl -s -X POST http://localhost:3001/login -H "Content-Type: application/json" -d '{"identifier":"sample_avery_01","password":"SamplePass123!"}')
+TOKEN=$(printf '%s' "$LOGIN_JSON" | node -pe 'JSON.parse(require("fs").readFileSync(0, "utf8")).token')
+USER_ID=$(printf '%s' "$LOGIN_JSON" | node -pe 'JSON.parse(require("fs").readFileSync(0, "utf8")).id')
+printf 'login user id: %s\n' "$USER_ID"
+for i in 1 2 3 4 5; do curl -s -o /tmp/sample-layouts-$i.json -w "retrieval run $i: http=%{http_code} time=%{time_total}s size=%{size_download} bytes\n" -H "Authorization: Bearer $TOKEN" "http://localhost:3001/users/$USER_ID/layouts"; done
+for i in 1 2 3 4 5; do curl -s -o /tmp/sample-search-$i.json -w "search run $i: http=%{http_code} time=%{time_total}s size=%{size_download} bytes\n" -H "Authorization: Bearer $TOKEN" "http://localhost:3001/users/$USER_ID/layouts?search=Kitchen"; done
+```
+
+Results:
+
+```text
+login user id: 10
+retrieval run 1: http=200 time=0.001568s size=17650 bytes
+retrieval run 2: http=200 time=0.001668s size=17650 bytes
+retrieval run 3: http=200 time=0.001661s size=17650 bytes
+retrieval run 4: http=200 time=0.001482s size=17650 bytes
+retrieval run 5: http=200 time=0.001318s size=17650 bytes
+search run 1: http=200 time=0.001313s size=798 bytes
+search run 2: http=200 time=0.001212s size=798 bytes
+search run 3: http=200 time=0.001218s size=798 bytes
+search run 4: http=200 time=0.001125s size=798 bytes
+search run 5: http=200 time=0.001598s size=798 bytes
+retrieved layouts: 10
+search results: 1
+first search result: [SAMPLE] Kitchen Backsplash 01-01
+```
+
+Average local response times:
+
+- Layout retrieval: about 0.00154s, or 1.54 ms
+- Layout search: about 0.00129s, or 1.29 ms
+
+Scaling analysis: with 37 total users, 275 total layouts, 25 sample users, and 250 sample layouts in the database, the user-scoped saved-layout API still returns the sample user's layout list and search results quickly. The seeded dataset is large enough to demonstrate that the app can operate against many saved layouts without visible slowdown in the tested local development environment.
+
+Conclusion: performance scales acceptably for this CS233 sample-data micro-project.
+
+## Screenshot Checklist
+
+Capture:
+
+1. Terminal showing `npm run seed` completing with 25 sample users skipped and 250 sample layouts present after the run.
+2. Terminal showing the MySQL count query result: 37 total users, 275 total layouts, 25 sample users, 250 sample layouts, and sample users with role `user`.
+3. Terminal showing `node backend/server.js` with `Server running on http://localhost:3001` and `Connected to MySQL`.
+4. Terminal showing the seeded API timing results for layout retrieval and layout search.
+5. Browser showing login as `sample_avery_01`.
+6. Browser showing the saved layouts list with `[SAMPLE]` layouts.
+7. Browser showing a search for `Kitchen` returning `[SAMPLE] Kitchen Backsplash 01-01`.
+8. Browser showing the seeded layout loaded in the tile pattern editor.
+
+## Video Demonstration Checklist
+
+Show:
+
+1. `SAMPLE_DATA_DEMO.md` and the seed script location.
+2. Run `npm run seed` and point out that the seed process is idempotent.
+3. Run the MySQL verification query and point out the sample-user and sample-layout counts.
+4. Start the backend with `node backend/server.js`.
+5. Log in as `sample_avery_01`.
+6. Show the saved `[SAMPLE]` layouts in the app.
+7. Search for `Kitchen` and load the matching seeded layout.
+8. Run the seeded API timing command and point out the retrieval and search response times.
+9. Conclude that the seeded dataset exists and the app still retrieves and searches layouts quickly.
+
 ## Limitations
 
 - The script creates development/demo data only.
