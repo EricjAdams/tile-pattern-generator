@@ -1,4 +1,17 @@
 function TileComponent({ tile, rotation = 0, onPointerDown, onPointerEnter }) {
+  if (!tile) {
+    return (
+      <button
+        className="tile tile-empty"
+        type="button"
+        aria-label="Empty tile"
+        onPointerDown={onPointerDown}
+        onPointerEnter={onPointerEnter}
+        onDragStart={(event) => event.preventDefault()}
+      />
+    );
+  }
+
   return (
     <button
       className="tile tile-photo"

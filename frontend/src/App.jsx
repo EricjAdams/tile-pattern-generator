@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import './App.css';
 import TilePreview from './TilePreview';
 
@@ -9,9 +9,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getStoredCurrentUser() {
   try {
-    const storedUser = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-    return parsedUser?.token ? parsedUser : null;
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+    return null;
   } catch (error) {
     console.warn('Stored user could not be loaded:', error);
     localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
@@ -127,7 +126,6 @@ function App() {
       }
 
       setCurrentUser(data);
-      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(data));
       setLoginIdentifier('');
       setLoginPassword('');
       setLoginStatus('');
@@ -190,7 +188,6 @@ function App() {
       }
 
       setCurrentUser(data);
-      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(data));
       setRegisterUsername('');
       setRegisterEmail('');
       setRegisterPassword('');
@@ -231,6 +228,20 @@ function App() {
       setAdminStatus('');
     }
   };
+
+  const handleAuthExpired = useCallback(() => {
+    setCurrentUser(null);
+    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+    setShowDeleteAccountDialog(false);
+    setDeleteAccountPassword('');
+    setDeleteAccountConfirmation('');
+    setDeleteAccountStatus('');
+    setLoginStatus('Your session expired. Please sign in again.');
+    setActiveView('designer');
+    setAdminUsers([]);
+    setAdminLayouts([]);
+    setAdminStatus('');
+  }, []);
 
   const handleAuthModeChange = (nextMode) => {
     setAuthMode(nextMode);
@@ -515,6 +526,7 @@ function App() {
               <TilePreview
                 userId={currentUser.id}
                 authToken={currentUser.token}
+                onAuthExpired={handleAuthExpired}
                 onSaveLayout={saveLayout}
               />
             )}
