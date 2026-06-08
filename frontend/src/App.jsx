@@ -95,6 +95,7 @@ function App() {
 
       console.log('Saved:', data);
       alert('Layout saved to database!');
+      return data;
     } catch (error) {
       console.error('Error saving layout:', error);
       alert(error.message || 'Could not save layout.');

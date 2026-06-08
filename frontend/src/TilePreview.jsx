@@ -27,12 +27,31 @@ function getUserCopyLayoutName(name) {
   return copyName || 'My Layout';
 }
 
-function getTilesReferencedByLayout(cells, availableTiles) {
-  const referencedTileKeys = new Set(
-    cells.map((cell) => cell.tileKey).filter(Boolean),
-  );
+function getSampleCopyLayoutName(name) {
+  const copyName = getUserCopyLayoutName(name);
+  return copyName.toLowerCase().startsWith('copy of ')
+    ? copyName
+    : `Copy of ${copyName}`;
+}
 
-  return availableTiles.filter((tile) => referencedTileKeys.has(tile.key));
+function getTilesReferencedByLayout(cells, availableTiles) {
+  const referencedTileKeys = new Set();
+  const referencedTileIds = new Set();
+
+  cells.forEach((cell) => {
+    if (cell?.tileKey) {
+      referencedTileKeys.add(cell.tileKey);
+      return;
+    }
+
+    if (Number.isFinite(cell?.tileId) && cell.tileId > 0) {
+      referencedTileIds.add(cell.tileId);
+    }
+  });
+
+  return availableTiles.filter(
+    (tile) => referencedTileKeys.has(tile.key) || referencedTileIds.has(tile.id),
+  );
 }
 
 function createEmptyLayout(columns = INITIAL_COLUMNS, rows = INITIAL_ROWS) {
@@ -42,6 +61,17 @@ function createEmptyLayout(columns = INITIAL_COLUMNS, rows = INITIAL_ROWS) {
     tileKey: undefined,
     rotation: 0,
   }));
+}
+
+function cloneLayout(cells) {
+  return Array.isArray(cells)
+    ? cells.map((cell, index) => ({
+        id: Number(cell?.id) || index + 1,
+        tileId: cell?.tileId ?? null,
+        tileKey: cell?.tileKey,
+        rotation: cell?.rotation ?? 0,
+      }))
+    : [];
 }
 
 function normalizeLayout(rawLayout) {
@@ -229,6 +259,9 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   const [layoutName, setLayoutName] = useState('My Layout');
   const [selectedSavedLayoutId, setSelectedSavedLayoutId] = useState(null);
   const [loadedLayoutIsSample, setLoadedLayoutIsSample] = useState(false);
+  const [originalLoadedLayout, setOriginalLoadedLayout] = useState(null);
+  const [previousRandomizedLayout, setPreviousRandomizedLayout] =
+    useState(null);
   const [wallWidth, setWallWidth] = useState(INITIAL_WALL_WIDTH);
   const [wallHeight, setWallHeight] = useState(INITIAL_WALL_HEIGHT);
   const [tileSize, setTileSize] = useState(INITIAL_TILE_SIZE);
@@ -283,6 +316,14 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   function resetCellTracking() {
     setLastClickedCellId(null);
     paintRotationRef.current = 0;
+  }
+
+  function isSampleProtectedLayout() {
+    return (
+      loadedLayoutIsSample ||
+      originalLoadedLayout?.isSample ||
+      isSampleLayoutName(layoutName)
+    );
   }
 
   const fetchSavedLayouts = useCallback(async (searchValue = '') => {
@@ -494,14 +535,39 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   }
 
   function handleResetLayout() {
+    if (originalLoadedLayout) {
+      setLayout(cloneLayout(originalLoadedLayout.cells));
+      setWallWidth(originalLoadedLayout.wallWidth);
+      setWallHeight(originalLoadedLayout.wallHeight);
+      setTileSize(originalLoadedLayout.tileSize);
+      setGrout(originalLoadedLayout.grout);
+      setZoom(originalLoadedLayout.zoom);
+      setZoomInput(String(originalLoadedLayout.zoom));
+      setLayoutName(originalLoadedLayout.layoutName);
+      setSelectedSavedLayoutId(originalLoadedLayout.savedLayoutId);
+      setLoadedLayoutIsSample(originalLoadedLayout.isSample);
+      setHasStartedDesigning(true);
+      setPreviousRandomizedLayout(null);
+      resetPaintState();
+      setStatusMessage(
+        originalLoadedLayout.isSample
+          ? 'Sample layout restored to its loaded state.'
+          : 'Saved layout restored to its loaded state.',
+      );
+      return;
+    }
+
     setLayout(createEmptyLayout());
     setWallWidth(INITIAL_WALL_WIDTH);
     setWallHeight(INITIAL_WALL_HEIGHT);
     setTileSize(INITIAL_TILE_SIZE);
     setGrout(INITIAL_GROUT);
+    setZoom(100);
+    setZoomInput('100');
     resetPaintState();
     setSelectedSavedLayoutId(null);
     setLoadedLayoutIsSample(false);
+    setPreviousRandomizedLayout(null);
     setHasStartedDesigning(uploadedTiles.length > 0);
     setStatusMessage('Layout reset.');
   }
@@ -636,6 +702,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
           : cell,
       ),
     );
+    setPreviousRandomizedLayout(null);
     setTileToDelete(null);
     setStatusMessage(`Deleted tile "${tileToDelete.name}".`);
   }
@@ -692,42 +759,87 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
     setLayout((currentLayout) => resizeLayout(currentLayout, columns, rows));
     setSelectedSavedLayoutId(null);
     setHasStartedDesigning(true);
+    setPreviousRandomizedLayout(null);
     resetPaintState();
     setStatusMessage(`Applied ${columns}×${rows} grid dimensions.`);
   }
 
   function handleRandomizeLayout() {
-    const randomizableTiles = loadedLayoutIsSample
-      ? getTilesReferencedByLayout(layout, renderableTiles)
+    const isSampleDerivedLayout = originalLoadedLayout?.isSample === true;
+    const randomizableTiles = isSampleDerivedLayout
+      ? originalLoadedLayout.sampleTiles ||
+        getTilesReferencedByLayout(originalLoadedLayout.cells, renderableTiles)
       : tiles.filter((tile) => selectedTileKeys.includes(tile.key));
+    const nextStatusMessage =
+      randomizableTiles.length === 0
+        ? 'Select or upload tiles before randomizing.'
+        : isSampleDerivedLayout
+          ? 'Randomized pattern with the loaded sample tile set.'
+          : 'Randomized pattern with the selected tile set.';
 
     if (randomizableTiles.length === 0) {
-      setStatusMessage('Select or upload tiles before randomizing.');
+      setStatusMessage(nextStatusMessage);
       return;
     }
 
+    setPreviousRandomizedLayout(cloneLayout(layout));
     setLayout((currentLayout) =>
       randomizeLayout(currentLayout, randomizableTiles),
     );
     setHasStartedDesigning(true);
     resetCellTracking();
-    setStatusMessage(
-      loadedLayoutIsSample
-        ? 'Randomized pattern with the loaded sample tile set.'
-        : 'Randomized pattern with the selected tile set.',
-    );
+    setStatusMessage(nextStatusMessage);
+  }
+
+  function handleUndoRandomize() {
+    if (!previousRandomizedLayout) {
+      return;
+    }
+
+    setLayout(cloneLayout(previousRandomizedLayout));
+    setPreviousRandomizedLayout(null);
+    setHasStartedDesigning(true);
+    resetCellTracking();
+    setStatusMessage('Restored the pattern from before randomizing.');
   }
 
   async function handleCreateLayout() {
-    const nextLayoutName = getUserCopyLayoutName(layoutName);
+    if (isSampleLayoutName(layoutName)) {
+      setStatusMessage(
+        'Please choose a different name. Sample layout names are reserved.',
+      );
+      return;
+    }
+
+    const candidateLayoutName = getUserCopyLayoutName(layoutName);
+    const nextLayoutName =
+      originalLoadedLayout?.isSample &&
+      candidateLayoutName === originalLoadedLayout.layoutName
+        ? getSampleCopyLayoutName(candidateLayoutName)
+        : candidateLayoutName;
     const projectSnapshot = buildProjectSnapshot();
 
     try {
-      await onSaveLayout(projectSnapshot, nextLayoutName);
+      const savedLayout = await onSaveLayout(projectSnapshot, nextLayoutName);
+      const nextSavedLayoutId = Number(savedLayout?.id) || null;
+      const nextLayoutIsSample = isSampleLayoutName(nextLayoutName);
       await fetchSavedLayouts(searchTerm);
       setLayoutName(nextLayoutName);
-      setSelectedSavedLayoutId(null);
-      setLoadedLayoutIsSample(false);
+      setSelectedSavedLayoutId(nextSavedLayoutId);
+      setLoadedLayoutIsSample(nextLayoutIsSample);
+      setOriginalLoadedLayout({
+        cells: cloneLayout(projectSnapshot.cells),
+        wallWidth: projectSnapshot.wallWidth,
+        wallHeight: projectSnapshot.wallHeight,
+        tileSize: projectSnapshot.tileSize,
+        grout: projectSnapshot.grout,
+        zoom: projectSnapshot.zoom,
+        layoutName: nextLayoutName,
+        savedLayoutId: nextSavedLayoutId,
+        isSample: nextLayoutIsSample,
+        sampleTiles: [],
+      });
+      setPreviousRandomizedLayout(null);
       setStatusMessage(`Created saved layout "${nextLayoutName}".`);
     } catch (error) {
       console.error('Create layout failed:', error);
@@ -744,22 +856,38 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
       return;
     }
 
+    const isSampleLayout = isSampleLayoutName(savedLayout.name);
+    const nextLayoutName = isSampleLayout
+      ? getSampleCopyLayoutName(savedLayout.name)
+      : savedLayout.name || '';
+    let nextWallWidth = wallWidth;
+    let nextWallHeight = wallHeight;
+    let nextTileSize = tileSize;
+    let nextGrout = grout;
+    let nextZoom = zoom;
+
     if (savedProject.isLegacy) {
       const dimensions = inferLayoutDimensions(
         savedProject.cells,
         getGridSize(wallWidth, tileSize, grout),
       );
-      setWallWidth(
-        getWallDimensionFromTileCount(dimensions.width, tileSize, grout),
+      nextWallWidth = getWallDimensionFromTileCount(
+        dimensions.width,
+        tileSize,
+        grout,
       );
-      setWallHeight(
-        getWallDimensionFromTileCount(dimensions.height, tileSize, grout),
+      nextWallHeight = getWallDimensionFromTileCount(
+        dimensions.height,
+        tileSize,
+        grout,
       );
+      setWallWidth(nextWallWidth);
+      setWallHeight(nextWallHeight);
     } else {
-      const nextTileSize = Number.isFinite(savedProject.tileSize)
+      nextTileSize = Number.isFinite(savedProject.tileSize)
         ? savedProject.tileSize
         : tileSize;
-      const nextGrout = Number.isFinite(savedProject.grout)
+      nextGrout = Number.isFinite(savedProject.grout)
         ? savedProject.grout
         : grout;
       const fallbackDimensions = inferLayoutDimensions(
@@ -775,43 +903,53 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
 
       setTileSize(nextTileSize);
       setGrout(nextGrout);
-      setWallWidth(
-        Number.isFinite(savedProject.wallWidth)
-          ? savedProject.wallWidth
-          : getWallDimensionFromTileCount(
-              savedColumns,
-              nextTileSize,
-              nextGrout,
-            ),
-      );
-      setWallHeight(
-        Number.isFinite(savedProject.wallHeight)
-          ? savedProject.wallHeight
-          : getWallDimensionFromTileCount(
-              savedRows,
-              nextTileSize,
-              nextGrout,
-            ),
-      );
+      nextWallWidth = Number.isFinite(savedProject.wallWidth)
+        ? savedProject.wallWidth
+        : getWallDimensionFromTileCount(
+            savedColumns,
+            nextTileSize,
+            nextGrout,
+          );
+      nextWallHeight = Number.isFinite(savedProject.wallHeight)
+        ? savedProject.wallHeight
+        : getWallDimensionFromTileCount(
+            savedRows,
+            nextTileSize,
+            nextGrout,
+          );
+      setWallWidth(nextWallWidth);
+      setWallHeight(nextWallHeight);
 
       if (Number.isFinite(savedProject.zoom)) {
-        const nextZoom = clamp(savedProject.zoom, 20, 200);
+        nextZoom = clamp(savedProject.zoom, 20, 200);
         setZoom(nextZoom);
         setZoomInput(String(nextZoom));
       }
     }
 
-    const isSampleLayout = isSampleLayoutName(savedLayout.name);
+    const sampleTiles = isSampleLayout
+      ? getTilesReferencedByLayout(savedProject.cells, renderableTiles)
+      : [];
 
-    setLayout(savedProject.cells);
-    setLayoutName(
-      isSampleLayout
-        ? getUserCopyLayoutName(savedLayout.name)
-        : savedLayout.name || '',
-    );
+    setOriginalLoadedLayout({
+      cells: cloneLayout(savedProject.cells),
+      wallWidth: nextWallWidth,
+      wallHeight: nextWallHeight,
+      tileSize: nextTileSize,
+      grout: nextGrout,
+      zoom: nextZoom,
+      layoutName: nextLayoutName,
+      savedLayoutId: savedLayout.id,
+      isSample: isSampleLayout,
+      sampleTiles,
+    });
+
+    setLayout(cloneLayout(savedProject.cells));
+    setLayoutName(nextLayoutName);
     setSelectedSavedLayoutId(savedLayout.id);
     setLoadedLayoutIsSample(isSampleLayout);
     setHasStartedDesigning(true);
+    setPreviousRandomizedLayout(null);
     resetPaintState();
     setStatusMessage(
       isSampleLayout
@@ -826,9 +964,9 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
       return;
     }
 
-    if (loadedLayoutIsSample) {
+    if (isSampleProtectedLayout()) {
       setStatusMessage(
-        'Sample layouts cannot be updated. Use Save New to save your version.',
+        'Sample layouts cannot be overwritten. Use Save New to create your own copy.',
       );
       return;
     }
@@ -879,6 +1017,8 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
       if (selectedSavedLayoutId === id) {
         setSelectedSavedLayoutId(null);
         setLoadedLayoutIsSample(false);
+        setOriginalLoadedLayout(null);
+        setPreviousRandomizedLayout(null);
       }
 
       await fetchSavedLayouts(searchTerm);
@@ -916,7 +1056,9 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   const tiles = visibleUploadedTiles;
   const renderableTiles = [...initialTiles, ...visibleUploadedTiles];
   const safeSavedLayouts = Array.isArray(savedLayouts) ? savedLayouts : [];
+  const updateSelectedDisabled = isSampleProtectedLayout();
   const gridColumns = getGridSize(wallWidth, tileSize, grout);
+  const gridRows = Math.max(1, Math.ceil(layout.length / gridColumns));
   const displayTileSize = Math.max(
     MINIMUM_TILE_DISPLAY_SIZE,
     tileSize * VISUAL_PIXELS_PER_INCH,
@@ -925,8 +1067,12 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
     MINIMUM_GROUT_DISPLAY_SIZE,
     grout * VISUAL_PIXELS_PER_INCH,
   );
-  const shouldShowTileGrid =
-    hasStartedDesigning || visibleUploadedTiles.length > 0;
+  const zoomScale = zoom / 100;
+  const unscaledGridWidth =
+    gridColumns * displayTileSize + Math.max(0, gridColumns - 1) * displayGrout;
+  const unscaledGridHeight =
+    gridRows * displayTileSize + Math.max(0, gridRows - 1) * displayGrout;
+  const shouldShowTileGrid = hasStartedDesigning;
 
   return (
     <div className="layout-container">
@@ -994,10 +1140,10 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
             <button
               className="ghost-button"
               onClick={handleUpdateLayout}
-              disabled={loadedLayoutIsSample}
+              disabled={updateSelectedDisabled}
               title={
-                loadedLayoutIsSample
-                  ? 'Sample layouts must be saved as a new layout.'
+                updateSelectedDisabled
+                  ? 'Sample layouts cannot be overwritten. Use Save New to create your own copy.'
                   : undefined
               }
             >
@@ -1113,6 +1259,17 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
                 Randomize Pattern
               </button>
             </div>
+
+            <div className="control-group full-width">
+              <button
+                type="button"
+                className="control-button secondary-control-button"
+                onClick={handleUndoRandomize}
+                disabled={!previousRandomizedLayout}
+              >
+                Undo Randomize
+              </button>
+            </div>
           </div>
 
           <div className="zoom-controls">
@@ -1144,32 +1301,44 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
 
         {statusMessage && <p className="status-message">{statusMessage}</p>}
 
-        {shouldShowTileGrid && (
+        {shouldShowTileGrid ? (
           <div className="tile-grid-wrapper">
             <div
-              className="tile-grid"
+              className="tile-grid-viewport"
               style={{
-                gridTemplateColumns: `repeat(${gridColumns}, ${displayTileSize}px)`,
-                gridAutoRows: `${displayTileSize}px`,
-                gap: `${displayGrout}px`,
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: 'top left',
+                width: `${unscaledGridWidth * zoomScale}px`,
+                height: `${unscaledGridHeight * zoomScale}px`,
               }}
             >
-              {layout.map((cell) => {
-                const tile = resolveTileForCell(cell, renderableTiles);
+              <div
+                className="tile-grid"
+                style={{
+                  gridTemplateColumns: `repeat(${gridColumns}, ${displayTileSize}px)`,
+                  gridAutoRows: `${displayTileSize}px`,
+                  gap: `${displayGrout}px`,
+                  transform: `scale(${zoomScale})`,
+                  transformOrigin: 'top left',
+                }}
+              >
+                {layout.map((cell) => {
+                  const tile = resolveTileForCell(cell, renderableTiles);
 
-                return (
-                  <TileComponent
-                    key={cell.id}
-                    tile={tile}
-                    rotation={cell.rotation}
-                    onPointerDown={() => handleGridPointerDown(cell.id)}
-                    onPointerEnter={() => handleGridPointerEnter(cell.id)}
-                  />
-                );
-              })}
+                  return (
+                    <TileComponent
+                      key={cell.id}
+                      tile={tile}
+                      rotation={cell.rotation}
+                      onPointerDown={() => handleGridPointerDown(cell.id)}
+                      onPointerEnter={() => handleGridPointerEnter(cell.id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
+          </div>
+        ) : (
+          <div className="empty-workspace">
+            <p>Load a saved layout or choose tiles to begin designing.</p>
           </div>
         )}
       </div>

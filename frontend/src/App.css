@@ -44,7 +44,8 @@ img {
 
 .app-shell {
   flex: 1;
-  max-width: 1320px;
+  width: 100%;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 40px 16px 60px;
 }
@@ -54,18 +55,20 @@ img {
   text-align: center;
   font-size: clamp(2.6rem, 5vw, 4.2rem);
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   font-weight: 600;
   color: #10181e;
 }
 
 .layout-container {
   display: grid;
-  grid-template-columns: 150px minmax(560px, 1fr) 280px;
+  grid-template-columns: minmax(180px, 240px) minmax(560px, 780px) minmax(180px, 240px);
   gap: 24px;
   align-items: start;
   justify-content: center;
   width: 100%;
+  max-width: 1330px;
+  margin: 0 auto;
 }
 
 .tile-library {
@@ -73,10 +76,11 @@ img {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  width: 150px;
-  max-height: 780px;
+  width: 100%;
+  max-width: 180px;
+  max-height: min(78vh, 820px);
   overflow-y: auto;
-  flex-shrink: 0;
+  justify-self: center;
 }
 
 .library-tile {
@@ -185,7 +189,6 @@ img {
 
 .preview-card {
   width: 100%;
-  max-width: 780px;
   min-width: 0;
   background: linear-gradient(
     145deg,
@@ -198,14 +201,17 @@ img {
     0 30px 70px rgba(15, 24, 30, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   padding: 28px;
+  justify-self: center;
 }
 
 .preview-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 12px;
+  text-align: center;
 }
 
 .section-label {
@@ -404,7 +410,7 @@ img {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .ghost-button {
@@ -498,6 +504,7 @@ img {
   display: grid;
   gap: 14px;
   margin-bottom: 18px;
+  justify-items: stretch;
 }
 
 .control-grid {
@@ -584,7 +591,29 @@ img {
 }
 
 .tile-grid-wrapper {
+  max-height: min(70vh, 760px);
   overflow: auto;
+  padding: 4px;
+  border-radius: 12px;
+  overscroll-behavior: contain;
+}
+
+.tile-grid-viewport {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.empty-workspace {
+  border: 1px dashed rgba(145, 168, 181, 0.32);
+  border-radius: 8px;
+  padding: 28px;
+  color: #cfd7dc;
+  text-align: center;
+}
+
+.empty-workspace p {
+  margin: 0;
 }
 
 .confirm-overlay {
@@ -626,6 +655,9 @@ img {
 }
 
 .tile-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: grid;
   width: max-content;
 }
@@ -671,14 +703,15 @@ img {
 }
 
 .saved-layouts-panel {
-  width: 280px;
-  max-height: 780px;
+  width: 100%;
+  max-height: min(78vh, 820px);
   overflow-y: auto;
   background: rgba(249, 250, 251, 0.9);
   padding: 16px;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 18px 40px rgba(15, 24, 30, 0.08);
+  justify-self: center;
 }
 
 .saved-layouts-panel h2 {
@@ -705,8 +738,8 @@ img {
 
 .saved-layout-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
   background: white;
   padding: 10px;
@@ -722,6 +755,8 @@ img {
   font-weight: 600;
   margin: 0;
   color: #172128;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .saved-layout-meta {
@@ -732,10 +767,14 @@ img {
 
 .saved-layout-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-end;
 }
 
 .saved-layout-actions button {
+  flex: 1 1 72px;
+  min-width: 0;
   padding: 5px 7px;
   font-size: 12px;
 }
@@ -757,7 +796,7 @@ img {
 
 @media (max-width: 1100px) {
   .layout-container {
-    grid-template-columns: 130px minmax(560px, 1fr);
+    grid-template-columns: minmax(150px, 180px) minmax(0, 780px);
   }
 
   .saved-layouts-panel {
@@ -794,13 +833,7 @@ img {
     width: 100%;
     max-width: none;
   }
-
-  .preview-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .action-group {
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
