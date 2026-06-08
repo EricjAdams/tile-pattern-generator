@@ -32,6 +32,11 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      # Run the frontend unit test suite.
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm run test
+
       # Audit frontend dependencies and fail only for high or critical findings.
       - name: Run frontend security audit
         working-directory: frontend

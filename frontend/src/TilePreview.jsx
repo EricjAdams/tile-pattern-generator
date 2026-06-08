@@ -2,6 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import TileComponent from './TileComponent';
 import initialTiles from './data/tiles';
 import { randomizeLayout } from './utils/randomizeLayout';
+import {
+  clamp,
+  createEmptyLayout,
+  cloneLayout,
+  getSampleCopyLayoutName,
+  getTilesReferencedByLayout,
+  getUserCopyLayoutName,
+  inferLayoutDimensions,
+  isSampleLayoutName,
+  normalizeLayout,
+} from './utils/layoutHelpers';
 
 const API_BASE_URL = 'http://localhost:3001';
 const INITIAL_TILE_SIZE = 6;
@@ -11,107 +22,6 @@ const INITIAL_WALL_HEIGHT = INITIAL_TILE_SIZE * 3 + INITIAL_GROUT * 2;
 const VISUAL_PIXELS_PER_INCH = 20;
 const MINIMUM_TILE_DISPLAY_SIZE = 36;
 const MINIMUM_GROUT_DISPLAY_SIZE = 2;
-const INITIAL_COLUMNS = 3;
-const INITIAL_ROWS = 3;
-const SAMPLE_LAYOUT_PREFIX = '[SAMPLE]';
-
-function isSampleLayoutName(name) {
-  return String(name || '').trim().startsWith(SAMPLE_LAYOUT_PREFIX);
-}
-
-function getUserCopyLayoutName(name) {
-  const copyName = String(name || '')
-    .replace(/^\[SAMPLE\]\s*/i, '')
-    .trim();
-
-  return copyName || 'My Layout';
-}
-
-function getSampleCopyLayoutName(name) {
-  const copyName = getUserCopyLayoutName(name);
-  return copyName.toLowerCase().startsWith('copy of ')
-    ? copyName
-    : `Copy of ${copyName}`;
-}
-
-function getTilesReferencedByLayout(cells, availableTiles) {
-  const referencedTileKeys = new Set();
-  const referencedTileIds = new Set();
-
-  cells.forEach((cell) => {
-    if (cell?.tileKey) {
-      referencedTileKeys.add(cell.tileKey);
-      return;
-    }
-
-    if (Number.isFinite(cell?.tileId) && cell.tileId > 0) {
-      referencedTileIds.add(cell.tileId);
-    }
-  });
-
-  return availableTiles.filter(
-    (tile) => referencedTileKeys.has(tile.key) || referencedTileIds.has(tile.id),
-  );
-}
-
-function createEmptyLayout(columns = INITIAL_COLUMNS, rows = INITIAL_ROWS) {
-  return Array.from({ length: columns * rows }, (_, index) => ({
-    id: index + 1,
-    tileId: null,
-    tileKey: undefined,
-    rotation: 0,
-  }));
-}
-
-function cloneLayout(cells) {
-  return Array.isArray(cells)
-    ? cells.map((cell, index) => ({
-        id: Number(cell?.id) || index + 1,
-        tileId: cell?.tileId ?? null,
-        tileKey: cell?.tileKey,
-        rotation: cell?.rotation ?? 0,
-      }))
-    : [];
-}
-
-function normalizeLayout(rawLayout) {
-  let parsedLayout = rawLayout;
-
-  if (typeof rawLayout === 'string') {
-    try {
-      parsedLayout = JSON.parse(rawLayout);
-    } catch (error) {
-      console.warn('Saved layout parse failed:', error, rawLayout);
-      return null;
-    }
-  }
-
-  if (!Array.isArray(parsedLayout)) {
-    console.warn('Saved layout is not an array:', parsedLayout);
-    return null;
-  }
-
-  return parsedLayout.map((cell, index) => {
-    if (typeof cell !== 'object' || cell === null) {
-      console.warn('Saved layout item is invalid, using default cell:', cell);
-      return {
-        id: index + 1,
-        tileId: null,
-        tileKey: undefined,
-        rotation: 0,
-      };
-    }
-
-    const tileId = Number(cell.tileId);
-
-    return {
-      id: Number(cell.id) || index + 1,
-      tileId: Number.isFinite(tileId) && tileId > 0 ? tileId : null,
-      tileKey: typeof cell.tileKey === 'string' ? cell.tileKey : undefined,
-      rotation: Number(cell.rotation) || 0,
-    };
-  });
-}
 
 function normalizeSavedProject(rawProject) {
   let parsedProject = rawProject;
@@ -157,32 +67,6 @@ function normalizeSavedProject(rawProject) {
     grout: Number(parsedProject.grout),
     zoom: Number(parsedProject.zoom),
   };
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function inferLayoutDimensions(cells, fallbackWidth = 3) {
-  if (!Array.isArray(cells) || cells.length === 0) {
-    return { width: fallbackWidth, height: 1 };
-  }
-
-  const length = cells.length;
-  const square = Math.round(Math.sqrt(length));
-
-  if (square * square === length) {
-    return { width: square, height: square };
-  }
-
-  for (let width = square; width >= 2; width -= 1) {
-    if (length % width === 0) {
-      return { width, height: length / width };
-    }
-  }
-
-  const width = clamp(fallbackWidth, 1, length);
-  return { width, height: Math.ceil(length / width) };
 }
 
 function resizeLayout(layout, width, height) {
@@ -326,30 +210,33 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
     );
   }
 
-  const fetchSavedLayouts = useCallback(async (searchValue = '') => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/users/${userId}/layouts?search=${encodeURIComponent(
-          searchValue,
-        )}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
+  const fetchSavedLayouts = useCallback(
+    async (searchValue = '') => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/users/${userId}/layouts?search=${encodeURIComponent(
+            searchValue,
+          )}`,
+          {
+            headers: getAuthHeaders(),
+          },
+        );
 
-      if (!response.ok) {
-        setStatusMessage('Could not load saved layouts.');
-        return;
+        if (!response.ok) {
+          setStatusMessage('Could not load saved layouts.');
+          return;
+        }
+
+        const data = await response.json();
+        setSavedLayouts(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching saved layouts:', error);
+        setSavedLayouts([]);
+        setStatusMessage('Could not connect to saved layouts.');
       }
-
-      const data = await response.json();
-      setSavedLayouts(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching saved layouts:', error);
-      setSavedLayouts([]);
-      setStatusMessage('Could not connect to saved layouts.');
-    }
-  }, [getAuthHeaders, userId]);
+    },
+    [getAuthHeaders, userId],
+  );
 
   const fetchUploadedTiles = useCallback(async () => {
     const requestId = tileLoadRequestIdRef.current + 1;
@@ -515,7 +402,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
       : [...selectedTileKeys, tileKey];
     const nextPaintTileKey = isAlreadySelected
       ? selectedTileKey === tileKey
-        ? nextSelectedTileKeys[nextSelectedTileKeys.length - 1] ?? null
+        ? (nextSelectedTileKeys[nextSelectedTileKeys.length - 1] ?? null)
         : selectedTileKey
       : tileKey;
 
@@ -685,7 +572,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
     setUploadedTiles(nextUploadedTiles);
     setSelectedTileKey(
       selectedTileKey === tileToDelete.key
-        ? nextSelectedTileKeys[nextSelectedTileKeys.length - 1] ?? null
+        ? (nextSelectedTileKeys[nextSelectedTileKeys.length - 1] ?? null)
         : selectedTileKey,
     );
     setSelectedTileKeys(nextSelectedTileKeys);
@@ -905,18 +792,10 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
       setGrout(nextGrout);
       nextWallWidth = Number.isFinite(savedProject.wallWidth)
         ? savedProject.wallWidth
-        : getWallDimensionFromTileCount(
-            savedColumns,
-            nextTileSize,
-            nextGrout,
-          );
+        : getWallDimensionFromTileCount(savedColumns, nextTileSize, nextGrout);
       nextWallHeight = Number.isFinite(savedProject.wallHeight)
         ? savedProject.wallHeight
-        : getWallDimensionFromTileCount(
-            savedRows,
-            nextTileSize,
-            nextGrout,
-          );
+        : getWallDimensionFromTileCount(savedRows, nextTileSize, nextGrout);
       setWallWidth(nextWallWidth);
       setWallHeight(nextWallHeight);
 
@@ -1077,10 +956,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   return (
     <div className="layout-container">
       <div className="tile-library">
-        <label
-          className="upload-tile-button"
-          htmlFor="tile-upload-input"
-        >
+        <label className="upload-tile-button" htmlFor="tile-upload-input">
           + Upload Tile
         </label>
 
@@ -1105,9 +981,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
             key={tile.key}
             className={`library-tile ${
               selectedTileKeys.includes(tile.key) ? 'active' : ''
-            } ${
-              selectedTileKey === tile.key ? 'paint-active' : ''
-            }`}
+            } ${selectedTileKey === tile.key ? 'paint-active' : ''}`}
             onClick={() => handleLibraryTileClick(tile.key)}
           >
             <button
