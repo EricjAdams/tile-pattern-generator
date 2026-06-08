@@ -4,6 +4,7 @@ import {
   cloneLayout,
   normalizeLayout,
   inferLayoutDimensions,
+  getRandomizableTiles,
   getTilesReferencedByLayout,
 } from './utils/layoutHelpers'
 
@@ -83,5 +84,94 @@ describe('TilePreview helpers', () => {
       { id: 7, key: 'red' },
       { id: 8, key: 'blue' },
     ])
+  })
+
+  it('returns selected uploaded tiles when selectedTileKeys are present', () => {
+    const tiles = [
+      { id: 1, key: 'alpha' },
+      { id: 2, key: 'beta' },
+      { id: 3, key: 'gamma' },
+    ]
+    const selectedTileKeys = ['beta']
+
+    expect(
+      getRandomizableTiles({
+        isSampleDerivedLayout: false,
+        originalLoadedLayout: null,
+        selectedTileKeys,
+        tiles,
+        renderableTiles: [],
+        currentLayout: [],
+      }),
+    ).toEqual([{ id: 2, key: 'beta' }])
+  })
+
+  it('derives the pool from the current layout when no selection exists for saved layouts', () => {
+    const tiles = [
+      { id: 1, key: 'alpha' },
+      { id: 2, key: 'beta' },
+      { id: 3, key: 'gamma' },
+    ]
+    const layout = [
+      { tileKey: 'gamma' },
+      { tileId: 2 },
+    ]
+
+    expect(
+      getRandomizableTiles({
+        isSampleDerivedLayout: false,
+        originalLoadedLayout: null,
+        selectedTileKeys: [],
+        tiles,
+        renderableTiles: tiles,
+        currentLayout: layout,
+      }),
+    ).toEqual([
+      { id: 2, key: 'beta' },
+      { id: 3, key: 'gamma' },
+    ])
+  })
+
+  it('uses original sampleTiles when sample-derived layout has a non-empty sample tile array', () => {
+    const sampleTiles = [{ id: 7, key: 'sample-a' }]
+    const renderableTiles = [{ id: 7, key: 'sample-a' }]
+
+    expect(
+      getRandomizableTiles({
+        isSampleDerivedLayout: true,
+        originalLoadedLayout: {
+          isSample: true,
+          sampleTiles,
+          cells: [{ tileKey: 'sample-a' }],
+        },
+        selectedTileKeys: [],
+        tiles: [],
+        renderableTiles,
+        currentLayout: [],
+      }),
+    ).toEqual(sampleTiles)
+  })
+
+  it('falls back to referenced tiles when sample-derived layout sampleTiles is empty', () => {
+    const renderableTiles = [
+      { id: 7, key: 'sample-a' },
+      { id: 8, key: 'sample-b' },
+    ]
+    const originalLoadedLayout = {
+      isSample: true,
+      sampleTiles: [],
+      cells: [{ tileKey: 'sample-b' }],
+    }
+
+    expect(
+      getRandomizableTiles({
+        isSampleDerivedLayout: true,
+        originalLoadedLayout,
+        selectedTileKeys: [],
+        tiles: [],
+        renderableTiles,
+        currentLayout: [],
+      }),
+    ).toEqual([{ id: 8, key: 'sample-b' }])
   })
 })

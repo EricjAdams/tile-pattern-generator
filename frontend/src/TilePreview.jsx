@@ -6,6 +6,7 @@ import {
   clamp,
   createEmptyLayout,
   cloneLayout,
+  getRandomizableTiles,
   getSampleCopyLayoutName,
   getTilesReferencedByLayout,
   getUserCopyLayoutName,
@@ -653,10 +654,14 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
 
   function handleRandomizeLayout() {
     const isSampleDerivedLayout = originalLoadedLayout?.isSample === true;
-    const randomizableTiles = isSampleDerivedLayout
-      ? originalLoadedLayout.sampleTiles ||
-        getTilesReferencedByLayout(originalLoadedLayout.cells, renderableTiles)
-      : tiles.filter((tile) => selectedTileKeys.includes(tile.key));
+    const randomizableTiles = getRandomizableTiles({
+      isSampleDerivedLayout,
+      originalLoadedLayout,
+      selectedTileKeys,
+      tiles,
+      renderableTiles,
+      currentLayout: layout,
+    });
     const nextStatusMessage =
       randomizableTiles.length === 0
         ? 'Select or upload tiles before randomizing.'

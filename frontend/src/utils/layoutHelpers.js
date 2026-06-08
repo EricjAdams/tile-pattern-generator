@@ -40,6 +40,36 @@ export function getTilesReferencedByLayout(cells, availableTiles) {
   )
 }
 
+export function getRandomizableTiles({
+  isSampleDerivedLayout,
+  originalLoadedLayout,
+  selectedTileKeys,
+  tiles,
+  renderableTiles,
+  currentLayout,
+}) {
+  if (isSampleDerivedLayout) {
+    const sampleTiles =
+      Array.isArray(originalLoadedLayout?.sampleTiles) &&
+      originalLoadedLayout.sampleTiles.length > 0
+        ? originalLoadedLayout.sampleTiles
+        : getTilesReferencedByLayout(
+            originalLoadedLayout?.cells ?? [],
+            renderableTiles,
+          )
+
+    return sampleTiles.length > 0
+      ? sampleTiles
+      : getTilesReferencedByLayout(currentLayout ?? [], renderableTiles)
+  }
+
+  if (Array.isArray(selectedTileKeys) && selectedTileKeys.length > 0) {
+    return tiles.filter((tile) => selectedTileKeys.includes(tile.key))
+  }
+
+  return getTilesReferencedByLayout(currentLayout ?? [], renderableTiles)
+}
+
 export function createEmptyLayout(columns = INITIAL_COLUMNS, rows = INITIAL_ROWS) {
   return Array.from({ length: columns * rows }, (_, index) => ({
     id: index + 1,
