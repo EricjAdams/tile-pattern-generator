@@ -36,6 +36,20 @@ function validatePassword(password) {
   return '';
 }
 
+async function readApiResponse(response) {
+  const body = await response.text();
+
+  if (!body) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    return { error: body };
+  }
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(getStoredCurrentUser);
   const [authMode, setAuthMode] = useState('login');
@@ -315,7 +329,7 @@ function App() {
   const fetchAdminDashboard = async () => {
     if (!currentUser || currentUser.role !== 'admin') {
       setAdminStatus('Access Denied');
-      return;
+      return false;
     }
 
     setAdminStatus('');
@@ -335,19 +349,21 @@ function App() {
 
       if (!usersResponse.ok) {
         setAdminStatus(usersData.error || 'Could not load admin users.');
-        return;
+        return false;
       }
 
       if (!layoutsResponse.ok) {
         setAdminStatus(layoutsData.error || 'Could not load admin layouts.');
-        return;
+        return false;
       }
 
       setAdminUsers(Array.isArray(usersData) ? usersData : []);
       setAdminLayouts(Array.isArray(layoutsData) ? layoutsData : []);
+      return true;
     } catch (error) {
       console.error('Admin dashboard fetch failed:', error);
       setAdminStatus('Could not connect to admin dashboard.');
+      return false;
     }
   };
 
@@ -381,6 +397,57 @@ function App() {
     } catch (error) {
       console.error('Admin layout delete failed:', error);
       setAdminStatus('Could not connect to delete layout.');
+    }
+  };
+
+  const handleDeleteAdminUser = async (user) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      setAdminStatus('Access Denied');
+      return;
+    }
+
+    if (Number(user.id) === Number(currentUser.id)) {
+      setAdminStatus('Use Delete Account to delete your own signed-in account.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this user account?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${user.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      const data = await readApiResponse(response);
+
+      if (!response.ok) {
+        setAdminStatus(data.error || 'Could not delete user account.');
+        return;
+      }
+
+      const deletedUser = data.user;
+      setAdminUsers((currentUsers) =>
+        currentUsers.map((currentAdminUser) =>
+          Number(currentAdminUser.id) === Number(user.id)
+            ? {
+                ...currentAdminUser,
+                deleted_at:
+                  deletedUser?.deleted_at || new Date().toISOString(),
+              }
+            : currentAdminUser,
+        ),
+      );
+      const refreshed = await fetchAdminDashboard();
+      if (!refreshed) {
+        return;
+      }
+
+      setAdminStatus('User account deleted.');
+    } catch (error) {
+      console.error('Admin user delete failed:', error);
+      setAdminStatus('Could not connect to delete user account.');
     }
   };
 
@@ -460,25 +527,34 @@ function App() {
                     <div className="admin-section">
                       <h3>Users</h3>
                       <div className="admin-table-wrapper">
-                        <table className="admin-table">
+                        <table className="admin-table admin-users-table">
                           <thead>
                             <tr>
-                              <th>ID</th>
                               <th>Username</th>
                               <th>Email</th>
                               <th>Role</th>
                               <th>Status</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {adminUsers.map((user) => (
                               <tr key={user.id}>
-                                <td>{user.id}</td>
                                 <td>{user.username}</td>
                                 <td>{user.email}</td>
                                 <td>{user.role}</td>
                                 <td>
                                   {user.deleted_at ? 'Deleted' : 'Active'}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="admin-delete-button"
+                                    disabled={Boolean(user.deleted_at)}
+                                    onClick={() => handleDeleteAdminUser(user)}
+                                  >
+                                    Delete
+                                  </button>
                                 </td>
                               </tr>
                             ))}

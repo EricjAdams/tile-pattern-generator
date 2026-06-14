@@ -260,6 +260,36 @@ function findDuplicateLayoutName(userId, name, excludedLayoutId, callback) {
   db.query(query, params, callback);
 }
 
+function softDeleteUser(userId, callback) {
+  const deleteQuery = `
+    UPDATE users
+    SET deleted_at = NOW()
+    WHERE id = ?
+      AND deleted_at IS NULL
+  `;
+
+  db.query(deleteQuery, [userId], callback);
+}
+
+function getAdminUser(userId, callback) {
+  const query = `
+    SELECT id, username, email, role, created_at, deleted_at
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+  `;
+
+  db.query(query, [userId], callback);
+}
+
+function deleteSessionsForUser(userId) {
+  for (const [token, session] of sessions.entries()) {
+    if (Number(session.userId) === Number(userId)) {
+      sessions.delete(token);
+    }
+  }
+}
+
 function handleLegacyLogin(identifier, password, res) {
   const query = `
     SELECT id, username, email, role
@@ -533,6 +563,46 @@ app.delete('/admin/layouts/:id', authenticateRequest, requireAdmin, (req, res) =
   });
 });
 
+// SOFT DELETE any user account for admins
+app.delete('/admin/users/:userId', authenticateRequest, requireAdmin, (req, res) => {
+  const { userId } = req.params;
+  const requestedUserId = Number(userId);
+
+  if (!Number.isInteger(requestedUserId) || requestedUserId <= 0) {
+    return res.status(400).json({ error: 'Valid user id is required.' });
+  }
+
+  if (Number(req.authenticatedUser.userId) === requestedUserId) {
+    return res.status(400).json({
+      error: 'Use Delete Account to delete your own signed-in account.',
+    });
+  }
+
+  softDeleteUser(requestedUserId, (deleteErr, result) => {
+    if (deleteErr) {
+      console.error('Admin account deletion failed:', deleteErr);
+      return res.status(500).json({ error: 'Admin account deletion failed' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    getAdminUser(requestedUserId, (lookupErr, users) => {
+      if (lookupErr) {
+        console.error('Admin account deletion lookup failed:', lookupErr);
+        return res.status(500).json({ error: 'Admin account deletion failed' });
+      }
+
+      deleteSessionsForUser(requestedUserId);
+      res.json({
+        message: 'Account deleted successfully',
+        user: users[0] || null,
+      });
+    });
+  });
+});
+
 // SOFT DELETE user account
 app.delete('/users/:userId', authenticateRequest, requireMatchingUser, (req, res) => {
   const { userId } = req.params;
@@ -572,14 +642,7 @@ app.delete('/users/:userId', authenticateRequest, requireMatchingUser, (req, res
         return res.status(401).json({ error: 'Password confirmation failed.' });
       }
 
-      const deleteQuery = `
-        UPDATE users
-        SET deleted_at = NOW()
-        WHERE id = ?
-          AND deleted_at IS NULL
-      `;
-
-      db.query(deleteQuery, [userId], (deleteErr, result) => {
+      softDeleteUser(userId, (deleteErr, result) => {
         if (deleteErr) {
           console.error('Account deletion failed:', deleteErr);
           return res.status(500).json({ error: 'Account deletion failed' });
@@ -589,7 +652,7 @@ app.delete('/users/:userId', authenticateRequest, requireMatchingUser, (req, res
           return res.status(404).json({ error: 'Account not found' });
         }
 
-        sessions.delete(req.authToken);
+        deleteSessionsForUser(userId);
         res.json({ message: 'Account deleted successfully' });
       });
     } catch (deleteErr) {

@@ -342,6 +342,31 @@ img {
   margin-bottom: 18px;
 }
 
+.admin-header .ghost-button {
+  border-color: rgba(71, 85, 105, 0.3);
+  background: #ffffff;
+  color: #172128;
+  box-shadow: 0 1px 2px rgba(15, 24, 30, 0.06);
+}
+
+.admin-header .ghost-button:hover {
+  background: #f8fafc;
+  border-color: rgba(51, 65, 85, 0.48);
+  box-shadow: 0 8px 18px rgba(15, 24, 30, 0.1);
+}
+
+.admin-header .ghost-button:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.35);
+  outline-offset: 2px;
+}
+
+.admin-header .ghost-button:disabled,
+.admin-header .ghost-button:disabled:hover {
+  border-color: rgba(100, 116, 139, 0.24);
+  background: #f8fafc;
+  color: #64748b;
+}
+
 .admin-header h2,
 .admin-section h3 {
   margin: 0;
@@ -369,6 +394,10 @@ img {
   background: #ffffff;
 }
 
+.admin-users-table {
+  table-layout: fixed;
+}
+
 .admin-table th,
 .admin-table td {
   padding: 10px 12px;
@@ -391,6 +420,34 @@ img {
   border-bottom: none;
 }
 
+.admin-users-table th,
+.admin-users-table td {
+  overflow-wrap: anywhere;
+}
+
+.admin-users-table th:nth-child(1),
+.admin-users-table td:nth-child(1) {
+  width: 24%;
+}
+
+.admin-users-table th:nth-child(2),
+.admin-users-table td:nth-child(2) {
+  width: 38%;
+}
+
+.admin-users-table th:nth-child(3),
+.admin-users-table td:nth-child(3),
+.admin-users-table th:nth-child(4),
+.admin-users-table td:nth-child(4) {
+  width: 13%;
+}
+
+.admin-users-table th:nth-child(5),
+.admin-users-table td:nth-child(5) {
+  width: 12%;
+  text-align: right;
+}
+
 .admin-delete-button {
   min-height: 34px;
   border: 1px solid rgba(185, 28, 28, 0.24);
@@ -404,6 +461,16 @@ img {
 
 .admin-delete-button:hover {
   background: #fef2f2;
+}
+
+.admin-delete-button:disabled {
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.admin-delete-button:disabled:hover {
+  background: #fff;
 }
 
 .action-group {
