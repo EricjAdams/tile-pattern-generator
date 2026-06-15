@@ -1,76 +1,86 @@
 # Tile Pattern Generator
 
-An interactive full-stack tile layout application that allows users to design, preview, save, and experiment with tile patterns in real time.
+Design your space, tile by tile.
 
-Originally developed as a frontend prototype, Tile Pattern Generator has evolved into a database-backed application featuring authentication, layout persistence, administrative tooling, automated testing, and continuous integration.
+![Authentication Experience](./ProgressSnaps/landing-page.jpg)
 
-**Live Demo:** Private development build available upon request.
+Tile Pattern Generator is a full-stack web application that allows users to upload custom tile images, design layouts interactively, save projects, and generate randomized tile patterns before installation.
+
+Originally developed as a software development course project at Olympic College, the application evolved into a production-style prototype featuring authentication, role-based administration, persistent file storage, automated testing, continuous integration, and deployment to Amazon Web Services (AWS).
+
+The goal of the project is to help users visualize tile layouts before installation, reducing material waste and improving design confidence.
+
+---
+
+## Tile Designer
+
+Authenticated users can upload custom tile images, create layouts, save designs, randomize patterns, and revisit projects through persistent storage.
+
+![Tile Designer](./ProgressSnaps/tile-designer.jpg)
 
 ---
 
 ## Features
 
-### Tile Design
+### Designer Features
 
-- Click-to-place tile system
-- Drag-to-paint multiple tiles
-- Tile rotation support
-- Dynamic wall dimension controls
-- Adjustable zoom controls
-- Responsive layout behavior
-- Real-time tile preview rendering
-
-### Tile Management
-
-- Dynamic tile libraries
+- User registration and authentication
+- Persistent login sessions
 - Upload custom tile images
-- Uploaded tile persistence
-- Sample tile collections
-- Empty-state support for new users
-
-### Layout Persistence
-
+- Interactive tile painting
+- Tile rotation
+- Adjustable wall dimensions
+- Adjustable tile sizing
+- Grout spacing controls
+- Zoom controls
 - Save new layouts
 - Update existing layouts
-- Load saved layouts
 - Search saved layouts
-- Delete saved layouts
-- Editable sample layouts and working copies
+- Randomize tile patterns
+- Undo randomization
+- Persistent layout storage
 
-### Pattern Exploration
+### Administrative Features
 
-- Randomize Pattern functionality
-- Undo Randomize support
-- Randomization for new layouts
-- Randomization for saved layouts
-- Randomization for sample layouts
-
-### Authentication & Security
-
-- User registration
-- User login and logout
-- Session management
-- Legacy account support
-- Administrative role support
-- Authorization middleware
-- IDOR mitigation and ownership validation
-- Role-based access controls
-
-### Quality & Automation
-
-- Vitest unit testing
-- ESLint validation
-- GitHub Actions continuous integration
-- Benchmark testing
-- Sample data scaling validation
+- Role-based authorization
+- Administrator dashboard
+- User management
+- Layout management
+- Soft delete functionality
+- Protected administrative endpoints
 
 ---
 
-## Tech Stack
+## Administrative Dashboard
+
+Role-based administration provides authorized users with access to management tools and system oversight.
+
+![Administrative Dashboard](./ProgressSnaps/admin.jpg)
+
+---
+
+## User Management
+
+Administrators can manage application users through a dedicated dashboard supporting role-based access control.
+
+![User Management](./ProgressSnaps/admin-users.jpg)
+
+---
+
+## Layout Administration
+
+Administrative layout management enables moderation and oversight of user-generated content.
+
+![Layout Administration](./ProgressSnaps/admin-layouts.jpg)
+
+---
+
+## Technology Stack
 
 ### Frontend
 
-- React (Vite)
+- React
+- Vite
 - JavaScript
 - CSS
 
@@ -81,83 +91,113 @@ Originally developed as a frontend prototype, Tile Pattern Generator has evolved
 
 ### Database
 
-- MySQL
+- MariaDB / MySQL
 
-### Testing & Automation
+### Infrastructure
+
+- Amazon Web Services (AWS EC2)
+- PM2 Process Manager
+
+### Testing & Quality
 
 - Vitest
-- ESLint
 - GitHub Actions
+- ESLint
 
 ---
 
-## Project Status
+## Architecture
 
-Tile Pattern Generator has evolved from a frontend proof of concept into a full-stack application featuring authentication, layout persistence, administrative functionality, automated testing, and continuous integration.
+```text
+Browser
+   ↓
+React Frontend
+   ↓
+Express API
+   ↓
+MariaDB Database
+   ↓
+Persistent Upload Storage
+```
 
-Current capabilities include:
+---
 
-- Authenticated user accounts
-- Persistent saved layouts
-- Sample users and sample projects
-- Uploaded tile persistence
-- Pattern randomization with undo support
-- Administrative tooling
-- Automated testing and CI validation
+## Deployment
 
-Current development is focused on refining the user experience, expanding visualization capabilities, and preparing the application for future production deployment.
+The application is deployed to AWS using an EC2 instance running:
+
+- Node.js backend services
+- PM2 process management
+- MariaDB database services
+- Persistent file upload storage
+
+The deployment process included:
+
+- Database migrations
+- Production data restoration
+- Legacy account migration
+- Asset recovery
+- Environment configuration
+- Production verification testing
+
+A complete end-to-end migration was performed from the local development environment to AWS production, including database export/import, MariaDB compatibility conversion, user restoration, uploaded asset recovery, and validation of persistent application functionality.
+
+---
+
+## Supporting Documentation
+
+Additional project artifacts are included within this repository:
+
+- `SECURITY_DEMO.md`
+- `BENCHMARK_DEMO.md`
+- `SAMPLE_DATA_DEMO.md`
+- `ADMIN_USERS_DEMO.md`
+
+These documents demonstrate the security enhancements, performance testing, administrative functionality, and sample data generation completed throughout development.
 
 ---
 
 ## Future Enhancements
 
-- Grout color visualization
-- Pattern export system
-- Material usage calculations
-- Advanced layout templates
-- Mobile-first refinements
-- AR-assisted tile previews
-- Cloud deployment
-- Public demonstration environment
+Potential future improvements include:
+
+- Responsive mobile designer experience
+- HTTPS and custom domain configuration
+- Password reset functionality
+- Email verification
+- PDF layout exports
+- Material quantity estimation
+- Drag-and-drop tile organization
+- Enhanced reporting and analytics
 
 ---
 
-## Project Evolution
+## Live Demo
 
-### Version 1 – Tile Preview Prototype
+Current deployment subject to change:
 
-![Initial Prototype](./ProgressSnaps/v1-basic-preview.jpg)
-
-Basic proof of concept used to establish the early layout structure and visual language of the application.
+[Open Live Demo](http://34.217.48.216:8080)
 
 ---
 
-### Version 2 – Interactive Grid System
+## About This Project
 
-![Interactive Grid](./ProgressSnaps/v2-interactive-grid.jpg)
+This project demonstrates:
 
-Expanded into an interactive grid system featuring tile placement, painting, rotation, uploads, and layout controls.
-
----
-
-### Version 3 – Persistence & Workflow Improvements
-
-![Previous UI](./ProgressSnaps/May3Progress.jpg)
-
-Introduced project naming workflows, saved layouts, database integration, and a more complete editing experience.
-
----
-
-### Version 4 – Full-Stack Application
-
-![Latest UI](./ProgressSnaps/ProgramState51726.jpg)
-
-Expanded into a complete authenticated application featuring user accounts, persistent layouts, responsive behavior, administrative functionality, enhanced tile management workflows, and database-backed design persistence.
+- Full-stack application development
+- Authentication and authorization
+- Secure file upload management
+- Database persistence
+- Automated testing practices
+- Continuous integration workflows
+- AWS cloud deployment
+- PM2 process management
+- Production data migration
+- Recovery of user-generated assets
+- Real-world debugging and operational problem solving
 
 ---
 
-## Author
+Created by **Eric Adams** as part of the **Olympic College Software Development Program**.
 
-Eric Adams
-
-Developed as part of Olympic College's Software Development program and continuously expanded into a production-oriented portfolio application.
+What began as a classroom assignment evolved into a deployed, production-style application capable of supporting authenticated users, administrative workflows, persistent storage, and cloud-hosted operation.
