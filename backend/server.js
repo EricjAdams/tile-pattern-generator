@@ -935,6 +935,10 @@ app.delete('/layouts/:id', (req, res) => {
   res.status(410).json({ error: LEGACY_LAYOUT_ROUTE_ERROR });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

@@ -1,6 +1,8 @@
 {
   "scripts": {
     "benchmark": "autocannon -c 25 -d 15 http://localhost:3001/",
+    "test": "npm --prefix frontend test && npm --prefix backend test",
+    "coverage": "npm --prefix frontend run coverage && npm --prefix backend run coverage",
     "seed": "npm --prefix backend run seed"
   },
   "devDependencies": {

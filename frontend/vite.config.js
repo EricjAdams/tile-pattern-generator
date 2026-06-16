@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     coverage: {
-      provider: 'c8',
+      provider: 'v8',
       reporter: ['text', 'lcov'],
     },
     include: ['src/**/*.{test,spec}.{js,jsx}'],

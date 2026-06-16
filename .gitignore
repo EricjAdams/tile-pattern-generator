@@ -9,6 +9,9 @@ dist-ssr/
 build/
 frontend/dist/
 backend/dist/
+coverage/
+frontend/coverage/
+backend/coverage/
 
 # Environment files
 .env
