@@ -140,6 +140,7 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   const [hasStartedDesigning, setHasStartedDesigning] = useState(false);
 
   const [savedLayouts, setSavedLayouts] = useState([]);
+  const [savedLayoutsTab, setSavedLayoutsTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [layoutName, setLayoutName] = useState('My Layout');
   const [selectedSavedLayoutId, setSelectedSavedLayoutId] = useState(null);
@@ -1250,47 +1251,87 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
         <p className="section-label">Database</p>
         <h2>Saved Layouts</h2>
 
-        <input
-          className="saved-layout-search"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder="Search saved layouts"
-        />
-
-        <div className="saved-layout-list">
-          {safeSavedLayouts.length === 0 ? (
-            <p className="empty-saved-layouts">No saved layouts found.</p>
-          ) : (
-            safeSavedLayouts.map((savedLayout) => (
-              <div
-                key={savedLayout.id}
-                className={`saved-layout-item ${
-                  selectedSavedLayoutId === savedLayout.id ? 'selected' : ''
-                }`}
-              >
-                <div>
-                  <p className="saved-layout-name">{savedLayout.name}</p>
-                  <p className="saved-layout-meta">ID {savedLayout.id}</p>
-                </div>
-
-                <div className="saved-layout-actions">
-                  <button
-                    type="button"
-                    onClick={() => handleLoadSavedLayout(savedLayout)}
-                  >
-                    Load
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteLayout(savedLayout.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div
+          className="saved-layout-tabs"
+          role="tablist"
+          aria-label="Saved layouts views"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={savedLayoutsTab === 'favorites'}
+            className={`saved-layout-tab ${
+              savedLayoutsTab === 'favorites' ? 'active' : ''
+            }`}
+            onClick={() => setSavedLayoutsTab('favorites')}
+          >
+            Favorites
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={savedLayoutsTab === 'all'}
+            className={`saved-layout-tab ${
+              savedLayoutsTab === 'all' ? 'active' : ''
+            }`}
+            onClick={() => setSavedLayoutsTab('all')}
+          >
+            All Layouts
+          </button>
         </div>
+
+        {savedLayoutsTab === 'favorites' ? (
+          <div className="saved-layout-favorites-empty" role="tabpanel">
+            <p className="saved-layout-favorites-title">
+              Favorite layouts will appear here.
+            </p>
+            <p>Save your most-used layouts here in a future release.</p>
+          </div>
+        ) : (
+          <div role="tabpanel">
+            <input
+              className="saved-layout-search"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Search saved layouts"
+            />
+
+            <div className="saved-layout-list">
+              {safeSavedLayouts.length === 0 ? (
+                <p className="empty-saved-layouts">No saved layouts found.</p>
+              ) : (
+                safeSavedLayouts.map((savedLayout) => (
+                  <div
+                    key={savedLayout.id}
+                    className={`saved-layout-item ${
+                      selectedSavedLayoutId === savedLayout.id ? 'selected' : ''
+                    }`}
+                  >
+                    <div>
+                      <p className="saved-layout-name">{savedLayout.name}</p>
+                      <p className="saved-layout-meta">ID {savedLayout.id}</p>
+                    </div>
+
+                    <div className="saved-layout-actions">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadSavedLayout(savedLayout)}
+                      >
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLayout(savedLayout.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </aside>
     </div>
   );
