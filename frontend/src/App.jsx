@@ -7,6 +7,7 @@ const API_BASE_URL = 'http://localhost:3001';
 const CURRENT_USER_STORAGE_KEY = 'tilePatternCurrentUser';
 const USERNAME_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ADMIN_ITEMS_PER_PAGE = 25;
 
 function getStoredCurrentUser() {
   try {
@@ -50,6 +51,23 @@ async function readApiResponse(response) {
   }
 }
 
+function getPaginatedItems(items, page, itemsPerPage = ADMIN_ITEMS_PER_PAGE) {
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  return {
+    items: items.slice(startIndex, endIndex),
+    currentPage,
+    totalPages,
+    totalItems,
+    startItem: totalItems === 0 ? 0 : startIndex + 1,
+    endItem: endIndex,
+  };
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(getStoredCurrentUser);
   const [authMode, setAuthMode] = useState('login');
@@ -75,6 +93,10 @@ function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminLayouts, setAdminLayouts] = useState([]);
   const [adminStatus, setAdminStatus] = useState('');
+  const [activeAdminTab, setActiveAdminTab] = useState('activeUsers');
+  const [activeUsersPage, setActiveUsersPage] = useState(1);
+  const [deletedUsersPage, setDeletedUsersPage] = useState(1);
+  const [layoutsPage, setLayoutsPage] = useState(1);
 
   function getAuthHeaders() {
     return {
@@ -82,6 +104,12 @@ function App() {
       Authorization: `Bearer ${currentUser.token}`,
     };
   }
+
+  const resetAdminPagination = useCallback(() => {
+    setActiveUsersPage(1);
+    setDeletedUsersPage(1);
+    setLayoutsPage(1);
+  }, []);
 
   const saveLayout = async (projectSnapshot, name) => {
     if (!currentUser) {
@@ -242,6 +270,8 @@ function App() {
       setAdminUsers([]);
       setAdminLayouts([]);
       setAdminStatus('');
+      setActiveAdminTab('activeUsers');
+      resetAdminPagination();
     }
   };
 
@@ -257,7 +287,9 @@ function App() {
     setAdminUsers([]);
     setAdminLayouts([]);
     setAdminStatus('');
-  }, []);
+    setActiveAdminTab('activeUsers');
+    resetAdminPagination();
+  }, [resetAdminPagination]);
 
   const handleAuthModeChange = (nextMode) => {
     setAuthMode(nextMode);
@@ -320,13 +352,15 @@ function App() {
       setActiveView('designer');
       setAdminUsers([]);
       setAdminLayouts([]);
+      setActiveAdminTab('activeUsers');
+      resetAdminPagination();
     } catch (error) {
       console.error('Account deletion failed:', error);
       setDeleteAccountStatus('Could not connect to delete account.');
     }
   };
 
-  const fetchAdminDashboard = async () => {
+  const fetchAdminDashboard = async ({ resetPagination = false } = {}) => {
     if (!currentUser || currentUser.role !== 'admin') {
       setAdminStatus('Access Denied');
       return false;
@@ -359,6 +393,9 @@ function App() {
 
       setAdminUsers(Array.isArray(usersData) ? usersData : []);
       setAdminLayouts(Array.isArray(layoutsData) ? layoutsData : []);
+      if (resetPagination) {
+        resetAdminPagination();
+      }
       return true;
     } catch (error) {
       console.error('Admin dashboard fetch failed:', error);
@@ -369,6 +406,7 @@ function App() {
 
   const handleOpenAdminDashboard = () => {
     setActiveView('admin');
+    setActiveAdminTab('activeUsers');
     fetchAdminDashboard();
   };
 
@@ -451,6 +489,55 @@ function App() {
     }
   };
 
+  const activeAdminUsers = adminUsers.filter((user) => !user.deleted_at);
+  const deletedAdminUsers = adminUsers.filter((user) => Boolean(user.deleted_at));
+  const activeUsersPagination = getPaginatedItems(
+    activeAdminUsers,
+    activeUsersPage,
+  );
+  const deletedUsersPagination = getPaginatedItems(
+    deletedAdminUsers,
+    deletedUsersPage,
+  );
+  const layoutsPagination = getPaginatedItems(adminLayouts, layoutsPage);
+
+  const renderAdminPagination = (pagination, itemLabel, setPage) => (
+    <div className="admin-pagination">
+      <p className="admin-pagination-summary">
+        {pagination.totalItems === 0
+          ? `Showing 0 of 0 ${itemLabel}`
+          : `Showing ${pagination.startItem}-${pagination.endItem} of ${pagination.totalItems} ${itemLabel}`}
+      </p>
+      <div className="admin-pagination-controls">
+        <button
+          type="button"
+          className="admin-pagination-button"
+          disabled={pagination.currentPage === 1}
+          onClick={() =>
+            setPage((currentPage) => Math.max(1, currentPage - 1))
+          }
+        >
+          Previous
+        </button>
+        <span className="admin-pagination-page">
+          Page {pagination.currentPage} of {pagination.totalPages}
+        </span>
+        <button
+          type="button"
+          className="admin-pagination-button"
+          disabled={pagination.currentPage === pagination.totalPages}
+          onClick={() =>
+            setPage((currentPage) =>
+              Math.min(pagination.totalPages, currentPage + 1),
+            )
+          }
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={currentUser ? 'app-container' : 'app-container auth-app-container'}
@@ -514,7 +601,9 @@ function App() {
                       <button
                         type="button"
                         className="ghost-button"
-                        onClick={fetchAdminDashboard}
+                        onClick={() =>
+                          fetchAdminDashboard({ resetPagination: true })
+                        }
                       >
                         Refresh
                       </button>
@@ -524,83 +613,209 @@ function App() {
                       <p className="status-message">{adminStatus}</p>
                     )}
 
-                    <div className="admin-section">
-                      <h3>Users</h3>
-                      <div className="admin-table-wrapper">
-                        <table className="admin-table admin-users-table">
-                          <thead>
-                            <tr>
-                              <th>Username</th>
-                              <th>Email</th>
-                              <th>Role</th>
-                              <th>Status</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {adminUsers.map((user) => (
-                              <tr key={user.id}>
-                                <td>{user.username}</td>
-                                <td>{user.email}</td>
-                                <td>{user.role}</td>
-                                <td>
-                                  {user.deleted_at ? 'Deleted' : 'Active'}
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="admin-delete-button"
-                                    disabled={Boolean(user.deleted_at)}
-                                    onClick={() => handleDeleteAdminUser(user)}
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="admin-tabs" role="tablist">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeAdminTab === 'activeUsers'}
+                        className={
+                          activeAdminTab === 'activeUsers'
+                            ? 'admin-tab active'
+                            : 'admin-tab'
+                        }
+                        onClick={() => setActiveAdminTab('activeUsers')}
+                      >
+                        Active Users
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeAdminTab === 'deletedUsers'}
+                        className={
+                          activeAdminTab === 'deletedUsers'
+                            ? 'admin-tab active'
+                            : 'admin-tab'
+                        }
+                        onClick={() => setActiveAdminTab('deletedUsers')}
+                      >
+                        Deleted Users
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeAdminTab === 'layouts'}
+                        className={
+                          activeAdminTab === 'layouts'
+                            ? 'admin-tab active'
+                            : 'admin-tab'
+                        }
+                        onClick={() => setActiveAdminTab('layouts')}
+                      >
+                        Layouts
+                      </button>
                     </div>
 
-                    <div className="admin-section">
-                      <h3>Layouts</h3>
-                      <div className="admin-table-wrapper">
-                        <table className="admin-table">
-                          <thead>
-                            <tr>
-                              <th>ID</th>
-                              <th>Name</th>
-                              <th>Owner</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {adminLayouts.map((layout) => (
-                              <tr key={layout.id}>
-                                <td>{layout.id}</td>
-                                <td>{layout.name}</td>
-                                <td>
-                                  {layout.ownerUsername || 'Unknown'} ·{' '}
-                                  {layout.ownerEmail || `User ${layout.userId}`}
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="admin-delete-button"
-                                    onClick={() =>
-                                      handleDeleteAdminLayout(layout.id)
-                                    }
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
+                    {activeAdminTab === 'activeUsers' && (
+                      <div className="admin-section" role="tabpanel">
+                        <h3>Active Users</h3>
+                        <div className="admin-table-wrapper">
+                          <table className="admin-table admin-users-table">
+                            <thead>
+                              <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Action</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {activeUsersPagination.items.map((user) => (
+                                <tr key={user.id}>
+                                  <td>{user.username}</td>
+                                  <td>{user.email}</td>
+                                  <td>{user.role}</td>
+                                  <td>
+                                    {user.deleted_at ? 'Deleted' : 'Active'}
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="admin-delete-button"
+                                      disabled={Boolean(user.deleted_at)}
+                                      onClick={() =>
+                                        handleDeleteAdminUser(user)
+                                      }
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {activeUsersPagination.totalItems === 0 && (
+                                <tr>
+                                  <td colSpan="5" className="admin-empty-cell">
+                                    No active users found.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        {renderAdminPagination(
+                          activeUsersPagination,
+                          'active users',
+                          setActiveUsersPage,
+                        )}
                       </div>
-                    </div>
+                    )}
+
+                    {activeAdminTab === 'deletedUsers' && (
+                      <div className="admin-section" role="tabpanel">
+                        <h3>Deleted Users</h3>
+                        <div className="admin-table-wrapper">
+                          <table className="admin-table admin-users-table">
+                            <thead>
+                              <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {deletedUsersPagination.items.map((user) => (
+                                <tr key={user.id}>
+                                  <td>{user.username}</td>
+                                  <td>{user.email}</td>
+                                  <td>{user.role}</td>
+                                  <td>
+                                    {user.deleted_at ? 'Deleted' : 'Active'}
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="admin-reactivate-placeholder"
+                                      disabled
+                                    >
+                                      <span>Reactivate</span>
+                                      <small>Future Release</small>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {deletedUsersPagination.totalItems === 0 && (
+                                <tr>
+                                  <td colSpan="5" className="admin-empty-cell">
+                                    No deleted users found.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        {renderAdminPagination(
+                          deletedUsersPagination,
+                          'deleted users',
+                          setDeletedUsersPage,
+                        )}
+                      </div>
+                    )}
+
+                    {activeAdminTab === 'layouts' && (
+                      <div className="admin-section" role="tabpanel">
+                        <h3>Layouts</h3>
+                        <div className="admin-table-wrapper">
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Owner</th>
+                                <th>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {layoutsPagination.items.map((layout) => (
+                                <tr key={layout.id}>
+                                  <td>{layout.id}</td>
+                                  <td>{layout.name}</td>
+                                  <td>
+                                    {layout.ownerUsername || 'Unknown'} ·{' '}
+                                    {layout.ownerEmail ||
+                                      `User ${layout.userId}`}
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="admin-delete-button"
+                                      onClick={() =>
+                                        handleDeleteAdminLayout(layout.id)
+                                      }
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {layoutsPagination.totalItems === 0 && (
+                                <tr>
+                                  <td colSpan="4" className="admin-empty-cell">
+                                    No layouts found.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        {renderAdminPagination(
+                          layoutsPagination,
+                          'layouts',
+                          setLayoutsPage,
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </section>

@@ -412,6 +412,48 @@ img {
   font-size: 1.05rem;
 }
 
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 4px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.admin-tab {
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  font-weight: 750;
+  padding: 9px 14px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.admin-tab:hover {
+  background: rgba(255, 252, 246, 0.58);
+  color: var(--app-ink);
+}
+
+.admin-tab.active {
+  background: rgba(255, 252, 246, 0.92);
+  border-color: var(--app-border);
+  color: var(--app-ink);
+  box-shadow: 0 -1px 0 rgba(255, 252, 246, 0.92) inset;
+}
+
+.admin-tab:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
 .admin-table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--app-border);
@@ -451,32 +493,45 @@ img {
   border-bottom: none;
 }
 
+.admin-empty-cell {
+  color: var(--app-muted);
+  font-weight: 650;
+  text-align: center;
+}
+
 .admin-users-table th,
 .admin-users-table td {
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-users-table th:nth-child(1),
 .admin-users-table td:nth-child(1) {
-  width: 24%;
+  width: 23%;
 }
 
 .admin-users-table th:nth-child(2),
 .admin-users-table td:nth-child(2) {
-  width: 38%;
+  width: 31%;
 }
 
 .admin-users-table th:nth-child(3),
-.admin-users-table td:nth-child(3),
+.admin-users-table td:nth-child(3) {
+  width: 10%;
+}
+
 .admin-users-table th:nth-child(4),
 .admin-users-table td:nth-child(4) {
-  width: 13%;
+  width: 11%;
 }
 
 .admin-users-table th:nth-child(5),
 .admin-users-table td:nth-child(5) {
-  width: 12%;
+  width: 25%;
   text-align: right;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .admin-delete-button {
@@ -502,6 +557,95 @@ img {
 
 .admin-delete-button:disabled:hover {
   background: #fffaf2;
+}
+
+.admin-reactivate-placeholder {
+  min-height: 34px;
+  min-width: 118px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid rgba(139, 115, 85, 0.32);
+  border-radius: 10px;
+  background: #f4efe6;
+  color: var(--app-ink);
+  cursor: not-allowed;
+  font-weight: 750;
+  line-height: 1.1;
+  padding: 5px 9px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.admin-reactivate-placeholder small {
+  color: var(--app-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--app-muted);
+}
+
+.admin-pagination-summary,
+.admin-pagination-page {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.admin-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-pagination-button {
+  min-height: 34px;
+  border: 1px solid rgba(91, 78, 60, 0.24);
+  border-radius: 10px;
+  background: #fffaf2;
+  color: var(--app-ink);
+  cursor: pointer;
+  font-weight: 750;
+  padding: 6px 10px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.admin-pagination-button:hover {
+  background: #f4efe6;
+  border-color: rgba(111, 90, 63, 0.42);
+  box-shadow: var(--app-shadow-soft);
+  transform: translateY(-1px);
+}
+
+.admin-pagination-button:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.admin-pagination-button:disabled,
+.admin-pagination-button:disabled:hover {
+  border-color: rgba(117, 107, 93, 0.2);
+  background: #eee8dc;
+  color: #756b5d;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .action-group {
@@ -977,6 +1121,16 @@ img {
     width: 100%;
     max-width: none;
   }
+
+  .admin-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-pagination-controls {
+    justify-content: space-between;
+  }
+
   .action-group {
     justify-content: center;
   }
