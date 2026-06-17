@@ -1094,6 +1094,61 @@ img {
   background: #fffaf2;
 }
 
+.saved-layout-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.saved-layout-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+}
+
+.saved-layout-meta-row .saved-layout-meta {
+  justify-self: center;
+}
+
+.saved-layout-meta-row .favorite-layout-button {
+  justify-self: center;
+}
+
+.favorite-layout-button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(139, 115, 85, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 250, 242, 0.86);
+  color: #6f675b;
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1;
+  padding: 0;
+  text-align: center;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.favorite-layout-button:hover,
+.favorite-layout-button:focus-visible {
+  color: #3c3328;
+  border-color: rgba(139, 115, 85, 0.58);
+  background: #fff4da;
+  box-shadow: 0 8px 16px rgba(75, 63, 46, 0.14);
+  transform: translateY(-1px);
+}
+
+.favorite-layout-button.active {
+  color: #4f3b13;
+  border-color: rgba(154, 116, 32, 0.62);
+  background: linear-gradient(135deg, #f7e3ad, #d6ae45);
+}
+
 .saved-layout-name {
   font-weight: 600;
   margin: 0;

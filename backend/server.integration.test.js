@@ -67,6 +67,25 @@ async function createTestUser(role = 'user') {
   };
 }
 
+async function ensureLayoutFavoriteColumn() {
+  const [columns] = await connection.execute(
+    `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'layouts'
+        AND COLUMN_NAME = 'is_favorite'
+      LIMIT 1
+    `,
+  );
+
+  if (columns.length === 0) {
+    await connection.execute(
+      'ALTER TABLE layouts ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT FALSE',
+    );
+  }
+}
+
 async function login(user) {
   const { response, body } = await request('/login', {
     method: 'POST',
@@ -87,6 +106,7 @@ async function login(user) {
 describe('backend integration routes', () => {
   before(async () => {
     connection = await mysql.createConnection(dbConfig);
+    await ensureLayoutFavoriteColumn();
     testUsers.userA = await createTestUser('user');
     testUsers.userB = await createTestUser('user');
     testUsers.admin = await createTestUser('admin');
@@ -169,13 +189,53 @@ describe('backend integration routes', () => {
     });
 
     assert.equal(readResult.response.status, 200);
-    assert.ok(
-      readResult.body.some(
-        (savedLayout) =>
-          savedLayout.id === createResult.body.id &&
-          savedLayout.name === layoutName,
-      ),
+    const createdLayout = readResult.body.find(
+      (savedLayout) =>
+        savedLayout.id === createResult.body.id &&
+        savedLayout.name === layoutName,
     );
+    assert.ok(createdLayout);
+    assert.equal(createdLayout.isFavorite, false);
+
+    const favoriteResult = await request(
+      `/layouts/${createResult.body.id}/favorite`,
+      {
+        method: 'PATCH',
+        headers: jsonHeaders(session.token),
+      },
+    );
+
+    assert.equal(favoriteResult.response.status, 200);
+    assert.equal(favoriteResult.body.id, createResult.body.id);
+    assert.equal(favoriteResult.body.isFavorite, true);
+
+    const userBSession = await login(testUsers.userB);
+    const forbiddenFavoriteResult = await request(
+      `/layouts/${createResult.body.id}/favorite`,
+      {
+        method: 'PATCH',
+        headers: jsonHeaders(userBSession.token),
+      },
+    );
+
+    assert.equal(forbiddenFavoriteResult.response.status, 403);
+    assert.equal(
+      forbiddenFavoriteResult.body.error,
+      'You are not allowed to update this layout.',
+    );
+
+    const adminSession = await login(testUsers.admin);
+    const adminFavoriteResult = await request(
+      `/layouts/${createResult.body.id}/favorite`,
+      {
+        method: 'PATCH',
+        headers: jsonHeaders(adminSession.token),
+      },
+    );
+
+    assert.equal(adminFavoriteResult.response.status, 200);
+    assert.equal(adminFavoriteResult.body.id, createResult.body.id);
+    assert.equal(adminFavoriteResult.body.isFavorite, false);
 
     const deleteResult = await request(
       `/users/${testUsers.userA.id}/layouts/${createResult.body.id}`,

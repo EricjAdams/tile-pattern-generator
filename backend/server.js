@@ -218,6 +218,47 @@ function normalizeTileRow(tile) {
   };
 }
 
+function normalizeLayoutRow(item) {
+  return {
+    id: item.id,
+    userId: item.userId,
+    name: item.name,
+    layout: normalizeLayoutData(item.layout),
+    isFavorite: Boolean(item.is_favorite),
+  };
+}
+
+function ensureLayoutFavoriteColumn() {
+  const columnLookupQuery = `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'layouts'
+      AND COLUMN_NAME = 'is_favorite'
+    LIMIT 1
+  `;
+
+  db.query(columnLookupQuery, (lookupErr, results) => {
+    if (lookupErr) {
+      console.error('Layout favorites schema check failed:', lookupErr);
+      return;
+    }
+
+    if (results.length > 0) {
+      return;
+    }
+
+    db.query(
+      'ALTER TABLE layouts ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT FALSE',
+      (alterErr) => {
+        if (alterErr) {
+          console.error('Layout favorites schema update failed:', alterErr);
+        }
+      },
+    );
+  });
+}
+
 function getTileNameFromFilename(filename) {
   const safeFilename = path.basename(String(filename || 'Uploaded tile'));
   return safeFilename.replace(/\.[^/.]+$/, '') || 'Uploaded tile';
@@ -313,6 +354,8 @@ function handleLegacyLogin(identifier, password, res) {
     res.json(createSession(results[0]));
   });
 }
+
+ensureLayoutFavoriteColumn();
 
 app.get('/', (req, res) => {
   res.send('Tile Pattern Generator backend is running!');
@@ -517,6 +560,7 @@ app.get('/admin/layouts', authenticateRequest, requireAdmin, (req, res) => {
       layouts.userId,
       layouts.name,
       layouts.layout,
+      layouts.is_favorite,
       users.username AS ownerUsername,
       users.email AS ownerEmail
     FROM layouts
@@ -531,10 +575,7 @@ app.get('/admin/layouts', authenticateRequest, requireAdmin, (req, res) => {
     }
 
     const layouts = results.map((item) => ({
-      id: item.id,
-      userId: item.userId,
-      name: item.name,
-      layout: normalizeLayoutData(item.layout),
+      ...normalizeLayoutRow(item),
       ownerUsername: item.ownerUsername,
       ownerEmail: item.ownerEmail,
     }));
@@ -789,7 +830,7 @@ app.get('/users/:userId/layouts', authenticateRequest, requireMatchingUser, (req
   const search = req.query.search || '';
 
   const query = `
-    SELECT id, userId, name, layout
+    SELECT id, userId, name, layout, is_favorite
     FROM layouts
     WHERE userId = ?
       AND name LIKE ?
@@ -802,12 +843,7 @@ app.get('/users/:userId/layouts', authenticateRequest, requireMatchingUser, (req
       return res.status(500).json({ error: 'Database fetch failed' });
     }
 
-    const layouts = results.map((item) => ({
-      id: item.id,
-      userId: item.userId,
-      name: item.name,
-      layout: normalizeLayoutData(item.layout),
-    }));
+    const layouts = results.map(normalizeLayoutRow);
 
     res.json(layouts);
   });
@@ -917,6 +953,63 @@ app.delete('/users/:userId/layouts/:id', authenticateRequest, requireMatchingUse
     }
 
     res.json({ message: 'Layout deleted successfully' });
+  });
+});
+
+// TOGGLE favorite status for a layout owned by the user or managed by an admin
+app.patch('/layouts/:id/favorite', authenticateRequest, (req, res) => {
+  const layoutId = Number(req.params.id);
+
+  if (!Number.isInteger(layoutId) || layoutId <= 0) {
+    return res.status(400).json({ error: 'Valid layout id is required.' });
+  }
+
+  const lookupQuery = `
+    SELECT id, userId, name, layout, is_favorite
+    FROM layouts
+    WHERE id = ?
+    LIMIT 1
+  `;
+
+  db.query(lookupQuery, [layoutId], (lookupErr, results) => {
+    if (lookupErr) {
+      console.error('Favorite layout lookup failed:', lookupErr);
+      return res.status(500).json({ error: 'Favorite layout update failed' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Layout not found' });
+    }
+
+    const layout = results[0];
+    const isOwner = Number(req.authenticatedUser.userId) === Number(layout.userId);
+    const isAdmin = req.authenticatedUser.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'You are not allowed to update this layout.' });
+    }
+
+    const updateQuery = `
+      UPDATE layouts
+      SET is_favorite = NOT is_favorite
+      WHERE id = ?
+    `;
+
+    db.query(updateQuery, [layoutId], (updateErr) => {
+      if (updateErr) {
+        console.error('Favorite layout update failed:', updateErr);
+        return res.status(500).json({ error: 'Favorite layout update failed' });
+      }
+
+      db.query(lookupQuery, [layoutId], (refreshErr, refreshedResults) => {
+        if (refreshErr) {
+          console.error('Favorite layout refresh failed:', refreshErr);
+          return res.status(500).json({ error: 'Favorite layout update failed' });
+        }
+
+        res.json(normalizeLayoutRow(refreshedResults[0]));
+      });
+    });
   });
 });
 

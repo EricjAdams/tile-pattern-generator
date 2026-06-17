@@ -914,6 +914,47 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
     }
   }
 
+  async function handleToggleFavoriteLayout(savedLayout) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/layouts/${savedLayout.id}/favorite`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+        },
+      );
+      const responseText = await response.text();
+      let data = {};
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          data = { error: responseText };
+        }
+      }
+
+      if (!response.ok) {
+        setStatusMessage(data.error || 'Could not update favorite layout.');
+        return;
+      }
+
+      setSavedLayouts((currentLayouts) =>
+        currentLayouts.map((layoutItem) =>
+          layoutItem.id === data.id ? { ...layoutItem, ...data } : layoutItem,
+        ),
+      );
+      setStatusMessage(
+        data.isFavorite
+          ? `Added "${data.name}" to favorites.`
+          : `Removed "${data.name}" from favorites.`,
+      );
+    } catch (error) {
+      console.error('Error updating favorite layout:', error);
+      setStatusMessage('Could not connect to update favorite layout.');
+    }
+  }
+
   function handleSearchChange(event) {
     const value = event.target.value;
     setSearchTerm(value);
@@ -941,6 +982,11 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
   const tiles = visibleUploadedTiles;
   const renderableTiles = [...initialTiles, ...visibleUploadedTiles];
   const safeSavedLayouts = Array.isArray(savedLayouts) ? savedLayouts : [];
+  const favoriteSavedLayouts = safeSavedLayouts.filter(
+    (savedLayout) => savedLayout.isFavorite === true,
+  );
+  const visibleSavedLayouts =
+    savedLayoutsTab === 'favorites' ? favoriteSavedLayouts : safeSavedLayouts;
   const updateSelectedDisabled = isSampleProtectedLayout();
   const gridColumns = getGridSize(wallWidth, tileSize, grout);
   const gridRows = Math.max(1, Math.ceil(layout.length / gridColumns));
@@ -1281,11 +1327,57 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
         </div>
 
         {savedLayoutsTab === 'favorites' ? (
-          <div className="saved-layout-favorites-empty" role="tabpanel">
-            <p className="saved-layout-favorites-title">
-              Favorite layouts will appear here.
-            </p>
-            <p>Save your most-used layouts here in a future release.</p>
+          <div role="tabpanel">
+            <div className="saved-layout-list">
+              {visibleSavedLayouts.length === 0 ? (
+                <p className="empty-saved-layouts">
+                  No favorite layouts yet. Click the star on a saved layout to
+                  add it to your favorites.
+                </p>
+              ) : (
+                visibleSavedLayouts.map((savedLayout) => (
+                  <div
+                    key={savedLayout.id}
+                    className={`saved-layout-item ${
+                      selectedSavedLayoutId === savedLayout.id ? 'selected' : ''
+                    }`}
+                  >
+                    <div className="saved-layout-summary">
+                      <p className="saved-layout-name">{savedLayout.name}</p>
+                      <div className="saved-layout-meta-row">
+                        <p className="saved-layout-meta">ID {savedLayout.id}</p>
+                        <button
+                          type="button"
+                          className={`favorite-layout-button ${
+                            savedLayout.isFavorite ? 'active' : ''
+                          }`}
+                          onClick={() => handleToggleFavoriteLayout(savedLayout)}
+                          aria-label={`Remove ${savedLayout.name} from favorites`}
+                          aria-pressed="true"
+                        >
+                          ★
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="saved-layout-actions">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadSavedLayout(savedLayout)}
+                      >
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLayout(savedLayout.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         ) : (
           <div role="tabpanel">
@@ -1297,19 +1389,36 @@ function TilePreview({ userId, authToken, onAuthExpired, onSaveLayout }) {
             />
 
             <div className="saved-layout-list">
-              {safeSavedLayouts.length === 0 ? (
+              {visibleSavedLayouts.length === 0 ? (
                 <p className="empty-saved-layouts">No saved layouts found.</p>
               ) : (
-                safeSavedLayouts.map((savedLayout) => (
+                visibleSavedLayouts.map((savedLayout) => (
                   <div
                     key={savedLayout.id}
                     className={`saved-layout-item ${
                       selectedSavedLayoutId === savedLayout.id ? 'selected' : ''
                     }`}
                   >
-                    <div>
+                    <div className="saved-layout-summary">
                       <p className="saved-layout-name">{savedLayout.name}</p>
-                      <p className="saved-layout-meta">ID {savedLayout.id}</p>
+                      <div className="saved-layout-meta-row">
+                        <p className="saved-layout-meta">ID {savedLayout.id}</p>
+                        <button
+                          type="button"
+                          className={`favorite-layout-button ${
+                            savedLayout.isFavorite ? 'active' : ''
+                          }`}
+                          onClick={() => handleToggleFavoriteLayout(savedLayout)}
+                          aria-label={
+                            savedLayout.isFavorite
+                              ? `Remove ${savedLayout.name} from favorites`
+                              : `Add ${savedLayout.name} to favorites`
+                          }
+                          aria-pressed={savedLayout.isFavorite}
+                        >
+                          {savedLayout.isFavorite ? '★' : '☆'}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="saved-layout-actions">
