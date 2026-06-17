@@ -9,6 +9,9 @@ dist-ssr/
 build/
 frontend/dist/
 backend/dist/
+coverage/
+frontend/coverage/
+backend/coverage/
 
 # Environment files
 .env
@@ -30,4 +33,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Project extras
-ProgressSnaps/
+ProgressSnaps/AWS Key/
+*.pem
+
+# Local uploaded tile assets
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/tiles/
+backend/uploads/tiles/**
+!backend/uploads/tiles/.gitkeep
