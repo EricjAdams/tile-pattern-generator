@@ -2,9 +2,9 @@
 
 Design your space, tile by tile.
 
-![Authentication Experience](./ProgressSnaps/landing-page.jpg)
+![Authentication Experience](./ProgressSnaps/sign-in.png)
 
-Tile Pattern Generator is a full-stack web application that allows users to upload custom tile images, design layouts interactively, save projects, and generate randomized tile patterns before installation.
+Tile Pattern Generator is a full-stack web application that allows users to upload custom tile images, design layouts interactively, save projects, organize favorite designs, and generate randomized tile patterns before installation.
 
 Originally developed as a software development course project at Olympic College, the application evolved into a production-style prototype featuring authentication, role-based administration, persistent file storage, automated testing, continuous integration, and deployment to Amazon Web Services (AWS).
 
@@ -12,11 +12,27 @@ The goal of the project is to help users visualize tile layouts before installat
 
 ---
 
+## Create an Account
+
+New users can create accounts directly within the application and immediately begin designing layouts using their own uploaded tile libraries.
+
+![Create Account](./ProgressSnaps/create-account.png)
+
+---
+
 ## Tile Designer
 
 Authenticated users can upload custom tile images, create layouts, save designs, randomize patterns, and revisit projects through persistent storage.
 
-![Tile Designer](./ProgressSnaps/tile-designer.jpg)
+![Tile Designer](./ProgressSnaps/general-designer.png)
+
+---
+
+## Saved Layout Organization
+
+Users can organize projects through dedicated Favorites and All Layouts views. Frequently used designs remain easily accessible while preserving a complete history of saved layouts.
+
+![Saved Layout Favorites](./ProgressSnaps/general-designer-favorites.png)
 
 ---
 
@@ -25,7 +41,7 @@ Authenticated users can upload custom tile images, create layouts, save designs,
 ### Designer Features
 
 - User registration and authentication
-- Persistent login sessions
+- Secure authenticated user sessions
 - Upload custom tile images
 - Interactive tile painting
 - Tile rotation
@@ -35,10 +51,13 @@ Authenticated users can upload custom tile images, create layouts, save designs,
 - Zoom controls
 - Save new layouts
 - Update existing layouts
+- Favorites and All Layout organization
 - Search saved layouts
 - Randomize tile patterns
 - Undo randomization
 - Persistent layout storage
+- Vertical scrolling uploaded tile libraries
+- Delete account workflow with confirmation safeguards
 
 ### Administrative Features
 
@@ -48,6 +67,30 @@ Authenticated users can upload custom tile images, create layouts, save designs,
 - Layout management
 - Soft delete functionality
 - Protected administrative endpoints
+- Paginated administrative views
+- Oversight of active and deleted accounts
+
+---
+
+## Account Management
+
+Users may permanently delete their accounts through a protected workflow requiring password confirmation and explicit acknowledgement before destructive actions occur. Uploaded tile assets remain preserved to support administrative oversight and data integrity.
+
+![Delete Account](./ProgressSnaps/general-designer-delete-account.png)
+
+---
+
+## Administrative Designer Experience
+
+Administrators retain full access to the tile designer while also receiving elevated privileges for user and layout moderation.
+
+### Admin Empty State
+
+![Admin Empty State](./ProgressSnaps/admin-empty-state.png)
+
+### Admin Designer
+
+![Admin Designer](./ProgressSnaps/admin-designer.png)
 
 ---
 
@@ -55,23 +98,23 @@ Authenticated users can upload custom tile images, create layouts, save designs,
 
 Role-based administration provides authorized users with access to management tools and system oversight.
 
-![Administrative Dashboard](./ProgressSnaps/admin.jpg)
+![Active Users Dashboard](./ProgressSnaps/admin-active-users-dashboard.png)
 
 ---
 
-## User Management
+## Deleted User Oversight
 
-Administrators can manage application users through a dedicated dashboard supporting role-based access control.
+Administrators can review soft-deleted accounts through a dedicated dashboard designed for future recovery workflows and operational visibility.
 
-![User Management](./ProgressSnaps/admin-users.jpg)
+![Deleted Users Dashboard](./ProgressSnaps/admin-deleted-users-dashboard.png)
 
 ---
 
 ## Layout Administration
 
-Administrative layout management enables moderation and oversight of user-generated content.
+Administrative layout management enables moderation and oversight of user-generated content through searchable, paginated views.
 
-![Layout Administration](./ProgressSnaps/admin-layouts.jpg)
+![Layout Administration](./ProgressSnaps/admin-layouts-dashboard.png)
 
 ---
 
