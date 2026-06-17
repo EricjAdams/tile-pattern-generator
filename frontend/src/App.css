@@ -984,6 +984,17 @@ img {
   min-width: 120px;
 }
 
+.confirm-dialog .ghost-button {
+  border-color: rgba(91, 78, 60, 0.28);
+  background: rgba(255, 250, 242, 0.74);
+  color: var(--app-ink);
+}
+
+.confirm-dialog .ghost-button:hover {
+  border-color: rgba(91, 78, 60, 0.42);
+  background: #fffaf2;
+}
+
 .tile-grid {
   position: absolute;
   top: 0;
