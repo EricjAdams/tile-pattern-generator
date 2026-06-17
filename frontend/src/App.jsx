@@ -7,7 +7,8 @@ const API_BASE_URL = 'http://localhost:3001';
 const CURRENT_USER_STORAGE_KEY = 'tilePatternCurrentUser';
 const USERNAME_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ADMIN_ITEMS_PER_PAGE = 25;
+const ADMIN_USERS_PER_PAGE = 10;
+const ADMIN_LAYOUTS_PER_PAGE = 10;
 
 function getStoredCurrentUser() {
   try {
@@ -51,7 +52,7 @@ async function readApiResponse(response) {
   }
 }
 
-function getPaginatedItems(items, page, itemsPerPage = ADMIN_ITEMS_PER_PAGE) {
+function getPaginatedItems(items, page, itemsPerPage) {
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
@@ -66,6 +67,45 @@ function getPaginatedItems(items, page, itemsPerPage = ADMIN_ITEMS_PER_PAGE) {
     startItem: totalItems === 0 ? 0 : startIndex + 1,
     endItem: endIndex,
   };
+}
+
+function getCompactPageItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set([1, totalPages]);
+  const nearStart = currentPage <= 4;
+  const nearEnd = currentPage >= totalPages - 3;
+
+  if (nearStart) {
+    for (let page = 2; page <= 5; page += 1) {
+      pages.add(page);
+    }
+  } else if (nearEnd) {
+    for (let page = totalPages - 4; page < totalPages; page += 1) {
+      pages.add(page);
+    }
+  } else {
+    pages.add(currentPage - 1);
+    pages.add(currentPage);
+    pages.add(currentPage + 1);
+  }
+
+  const sortedPages = [...pages].sort((a, b) => a - b);
+  const compactItems = [];
+
+  sortedPages.forEach((page, index) => {
+    const previousPage = sortedPages[index - 1];
+
+    if (previousPage && page - previousPage > 1) {
+      compactItems.push(`ellipsis-${previousPage}-${page}`);
+    }
+
+    compactItems.push(page);
+  });
+
+  return compactItems;
 }
 
 function App() {
@@ -494,12 +534,18 @@ function App() {
   const activeUsersPagination = getPaginatedItems(
     activeAdminUsers,
     activeUsersPage,
+    ADMIN_USERS_PER_PAGE,
   );
   const deletedUsersPagination = getPaginatedItems(
     deletedAdminUsers,
     deletedUsersPage,
+    ADMIN_USERS_PER_PAGE,
   );
-  const layoutsPagination = getPaginatedItems(adminLayouts, layoutsPage);
+  const layoutsPagination = getPaginatedItems(
+    adminLayouts,
+    layoutsPage,
+    ADMIN_LAYOUTS_PER_PAGE,
+  );
 
   const renderAdminPagination = (pagination, itemLabel, setPage) => (
     <div className="admin-pagination">
@@ -519,9 +565,42 @@ function App() {
         >
           Previous
         </button>
-        <span className="admin-pagination-page">
-          Page {pagination.currentPage} of {pagination.totalPages}
-        </span>
+        <div className="admin-pagination-pages" aria-label="Page navigation">
+          {getCompactPageItems(
+            pagination.currentPage,
+            pagination.totalPages,
+          ).map((pageItem) => {
+            if (typeof pageItem === 'string') {
+              return (
+                <span
+                  key={pageItem}
+                  className="admin-pagination-ellipsis"
+                  aria-hidden="true"
+                >
+                  …
+                </span>
+              );
+            }
+
+            return (
+              <button
+                key={pageItem}
+                type="button"
+                className={
+                  pageItem === pagination.currentPage
+                    ? 'admin-pagination-button admin-pagination-number active'
+                    : 'admin-pagination-button admin-pagination-number'
+                }
+                aria-current={
+                  pageItem === pagination.currentPage ? 'page' : undefined
+                }
+                onClick={() => setPage(pageItem)}
+              >
+                {pageItem}
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           className="admin-pagination-button"

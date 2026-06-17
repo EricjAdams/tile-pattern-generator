@@ -607,15 +607,15 @@ img {
 
 .admin-pagination {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
   margin-top: 12px;
   color: var(--app-muted);
 }
 
-.admin-pagination-summary,
-.admin-pagination-page {
+.admin-pagination-summary {
   margin: 0;
   font-size: 0.9rem;
   font-weight: 650;
@@ -626,7 +626,16 @@ img {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.admin-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .admin-pagination-button {
@@ -650,6 +659,25 @@ img {
   border-color: rgba(111, 90, 63, 0.42);
   box-shadow: var(--app-shadow-soft);
   transform: translateY(-1px);
+}
+
+.admin-pagination-number {
+  min-width: 34px;
+  padding: 6px 8px;
+}
+
+.admin-pagination-number.active {
+  border-color: rgba(139, 115, 85, 0.58);
+  background: linear-gradient(135deg, #f6e7c9, #d5b879);
+  color: #2f281f;
+  box-shadow: 0 8px 18px rgba(75, 63, 46, 0.16);
+}
+
+.admin-pagination-ellipsis {
+  min-width: 18px;
+  color: var(--app-muted);
+  font-weight: 750;
+  text-align: center;
 }
 
 .admin-pagination-button:focus-visible {
